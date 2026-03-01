@@ -4,19 +4,18 @@
       <!-- 未生成好友码状态 -->
       <div v-if="!friendCode" class="no-code-state">
         <img src="@/assets/friend_code_ungenerated.png" alt="未生成好友码" class="ungenerated-image" />
-        <div class="icon">
-          <span class="iconfont icon-add"></span>
+        <div class="code-card">
+          <p class="code-header">您暂未生成好友码</p>
+          <p class="tip">生成一个好友码，与您的家人与朋友共享文件~</p>
+          <el-button 
+            type="primary" 
+            size="large"
+            @click="generateFriendCode"
+            :loading="generating"
+          >
+            生成好友码
+          </el-button>
         </div>
-        <p class="title">还未生成好友码</p>
-        <p class="description">生成好友码后，其他用户可以通过该码快速添加你为好友</p>
-        <el-button 
-          type="primary" 
-          size="large"
-          @click="generateFriendCode"
-          :loading="generating"
-        >
-          生成好友码
-        </el-button>
       </div>
 
       <!-- 已生成好友码状态 -->
@@ -29,6 +28,13 @@
               <span class="iconfont icon-time"></span>
               {{ expiryTime }}秒后失效
             </span>
+          </div>
+          <div class="expiry-progress">
+            <el-progress 
+              :percentage="(expiryTime / 60) * 100" 
+              color="#67c23a"
+              :show-text="false"
+            />
           </div>
           <div class="code-display">
             <div class="code-text">{{ friendCode }}</div>
@@ -43,7 +49,7 @@
             </el-button>
           </div>
           <div class="code-footer">
-            <p class="tip">分享此码给好友，他们可以快速添加你</p>
+            <p class="tip">好友码是添加好友的唯一凭证，请妥善保管</p>
           </div>
         </div>
 
@@ -182,52 +188,51 @@ onUnmounted(() => {
 
   // 未生成状态
   .no-code-state {
-    text-align: center;
-    padding: 40px 40px 60px;
-    background-color: var(--component-bg);
-    border-radius: 8px;
-    border: 2px dashed var(--border-light);
-    min-height: 500px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
 
     .ungenerated-image {
       width: 100%;
       max-width: 350px;
       height: 280px;
       object-fit: contain;
-      margin-bottom: 30px;
-    }
-
-    .icon {
-      font-size: 80px;
-      color: #05a1f5;
-      margin-bottom: 20px;
-      
-      .iconfont {
-        display: inline-block;
-      }
-    }
-
-    .title {
-      font-size: 20px;
-      font-weight: bold;
-      color: var(--text-primary);
       margin-bottom: 10px;
     }
 
-    .description {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-bottom: 30px;
-      line-height: 1.6;
+    .code-card {
+      width: 100%;
+      text-align: center;
+      background-color: var(--component-bg);
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+
+      .title {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        font-style: italic;
+        letter-spacing: 1px;
+      }
+
+      .description {
+        font-size: 15px;
+        color: var(--text-secondary);
+        margin-bottom: 30px;
+        line-height: 1.8;
+        font-weight: 500;
+      }
     }
   }
 
   // 已生成状态
   .code-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
     .generated-image {
       width: 100%;
       max-width: 350px;
@@ -237,6 +242,7 @@ onUnmounted(() => {
     }
 
     .code-card {
+      width: 100%;
       background-color: var(--component-bg);
       border-radius: 8px;
       padding: 30px;
@@ -252,7 +258,8 @@ onUnmounted(() => {
         .label {
           font-size: 14px;
           color: var(--text-secondary);
-          font-weight: 500;
+          font-weight: 600;
+          letter-spacing: 0.5px;
         }
 
         .expiry-time {
@@ -268,6 +275,14 @@ onUnmounted(() => {
           .iconfont {
             font-size: 12px;
           }
+        }
+      }
+
+      .expiry-progress {
+        margin-bottom: 15px;
+        
+        :deep(.el-progress__bar) {
+          background-color: #67c23a !important;
         }
       }
 
@@ -302,9 +317,11 @@ onUnmounted(() => {
 
       .code-footer {
         .tip {
-          font-size: 12px;
+          font-size: 13px;
           color: var(--text-tertiary);
           margin: 0;
+          font-weight: 500;
+          letter-spacing: 0.3px;
         }
       }
     }
