@@ -21,23 +21,22 @@ if (-Not (Test-Path "dist")) {
     exit 1
 }
 
-# 3. 备份旧的dist目录（如果存在）
+# 3. 删除旧的dist目录并移动新的dist目录到Nginx
 $targetPath = "D:/nginx-1.23.4/projects/dist"
 Write-Host "`n[2/4] 处理旧的dist目录..." -ForegroundColor Yellow
 
 if (Test-Path $targetPath) {
-    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $backupPath = "D:/nginx-1.23.4/projects/dist_backup_$timestamp"
-    Move-Item -Path $targetPath -Destination $backupPath -Force
-    Write-Host "已备份到: $backupPath" -ForegroundColor Green
+    Write-Host "正在删除旧的dist目录..." -ForegroundColor Yellow
+    Remove-Item -Path $targetPath -Recurse -Force
+    Write-Host "旧目录已删除" -ForegroundColor Green
 }
 else {
-    Write-Host "无需备份（目标目录不存在）" -ForegroundColor Yellow
+    Write-Host "无需删除（目标目录不存在）" -ForegroundColor Yellow
 }
 
 # 4. 移动新的dist目录到Nginx
 Write-Host "`n[3/4] 移动dist目录到Nginx..." -ForegroundColor Yellow
-Copy-Item -Path "dist" -Destination "D:/nginx-1.23.4/projects/" -Recurse -Force
+Move-Item -Path "dist" -Destination $targetPath -Force
 Write-Host "文件移动完成！" -ForegroundColor Green
 
 # 5. 重启Nginx服务

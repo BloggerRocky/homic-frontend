@@ -537,14 +537,15 @@ getUseSpace();
             width: 28px;
             height: 28px;
             object-fit: contain;
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
+            opacity: 0.4;
+            transition: opacity 0.3s ease, transform 0.3s ease;
           }
         }
       }
       .active {
         .side-icon {
           opacity: 1;
+          transform: scale(1.1);
         }
         .text {
           color: #06a7ff;
