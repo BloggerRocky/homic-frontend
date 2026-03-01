@@ -1,0 +1,261 @@
+/* 全局主题变量和样式 */
+
+/* 浅色模式（默认） */
+:root {
+  /* 背景色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #ebeef5;
+  
+  /* 文字色 */
+  --text-primary: #303133;
+  --text-secondary: #606266;
+  --text-tertiary: #909399;
+  --text-disabled: #c0c4cc;
+  
+  /* 边框色 */
+  --border-color: #dcdfe6;
+  --border-light: #ebeef5;
+  
+  /* 组件背景 */
+  --component-bg: #ffffff;
+  --component-hover-bg: #f5f7fa;
+  --component-active-bg: #e6e8eb;
+  
+  /* 输入框 */
+  --input-bg: #ffffff;
+  --input-border: #dcdfe6;
+  --input-text: #606266;
+  
+  /* 卡片 */
+  --card-bg: #ffffff;
+  --card-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  
+  /* 其他 */
+  --divider-color: #ebeef5;
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* 深色模式 */
+:root.dark-mode {
+  /* 背景色 */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #252525;
+  --bg-tertiary: #2f2f2f;
+  
+  /* 文字色 */
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #71717a;
+  --text-disabled: #52525b;
+  
+  /* 边框色 */
+  --border-color: #3f3f46;
+  --border-light: #27272a;
+  
+  /* 组件背景 */
+  --component-bg: #252525;
+  --component-hover-bg: #2f2f2f;
+  --component-active-bg: #3f3f46;
+  
+  /* 输入框 */
+  --input-bg: #27272a;
+  --input-border: #3f3f46;
+  --input-text: #e4e4e7;
+  
+  /* 卡片 */
+  --card-bg: #252525;
+  --card-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.5);
+  
+  /* 其他 */
+  --divider-color: #3f3f46;
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+}
+
+/* 全局样式应用 */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Element Plus 深色模式适配 */
+:root.dark-mode {
+  --el-bg-color: var(--bg-primary);
+  --el-bg-color-page: var(--bg-secondary);
+  --el-bg-color-overlay: var(--component-bg);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-text-color-disabled: var(--text-disabled);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-light);
+  --el-fill-color-blank: var(--bg-secondary);
+  --el-fill-color-light: var(--bg-tertiary);
+  --el-fill-color-lighter: var(--bg-secondary);
+  --el-fill-color-extra-light: var(--bg-primary);
+}
+
+/* 平滑过渡 */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 禁用某些元素的过渡（如动画） */
+.no-theme-transition {
+  transition: none !important;
+}
+
+/* 输入框样式 */
+input,
+textarea,
+select {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--input-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 代码块样式 */
+code,
+pre {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* 表格样式 */
+table {
+  background-color: var(--component-bg);
+  color: var(--text-primary);
+}
+
+table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+table td {
+  border-color: var(--border-light);
+}
+
+/* 链接样式 */
+a {
+  color: #409eff;
+}
+
+:root.dark-mode a {
+  color: #79bbff;
+}
+
+/* 按钮悬停效果 */
+button,
+.el-button {
+  transition: all 0.3s ease;
+}
+
+/* 卡片样式 */
+.el-card {
+  background-color: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+/* 对话框样式 */
+.el-dialog {
+  background-color: var(--component-bg);
+}
+
+.el-dialog__header {
+  background-color: var(--component-bg);
+  border-bottom-color: var(--border-light);
+}
+
+/* 下拉菜单 */
+.el-dropdown-menu {
+  background-color: var(--component-bg);
+}
+
+.el-dropdown-menu__item {
+  color: var(--text-primary);
+}
+
+.el-dropdown-menu__item:hover {
+  background-color: var(--component-hover-bg);
+}
+
+/* 弹出框 */
+.el-popover {
+  background-color: var(--component-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* 提示框 */
+.el-tooltip__popper {
+  background-color: var(--component-bg);
+  color: var(--text-primary);
+}
+
+/* 标签页 */
+.el-tabs__nav {
+  background-color: var(--bg-secondary);
+}
+
+.el-tabs__item {
+  color: var(--text-secondary);
+}
+
+.el-tabs__item.is-active {
+  color: #409eff;
+}
+
+:root.dark-mode .el-tabs__item.is-active {
+  color: #79bbff;
+}
+
+/* 分页 */
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination .el-pager li {
+  background-color: var(--component-bg);
+  color: var(--text-primary);
+}
+
+.el-pagination .btn-prev:hover,
+.el-pagination .btn-next:hover,
+.el-pagination .el-pager li:hover {
+  background-color: var(--component-hover-bg);
+}
+
+/* 消息提示 */
+.el-message {
+  background-color: var(--component-bg);
+  color: var(--text-primary);
+}
+
+/* 加载动画 */
+.el-loading-mask {
+  background-color: var(--overlay-bg);
+}
