@@ -90,19 +90,21 @@
           />
         </div>
         <template #footer>
-          <button 
-            class="custom-btn btn-cancel"
-            @click="searchDialogVisible = false"
-          >
-            取消
-          </button>
-          <button 
-            class="custom-btn btn-search"
-            @click="searchFriend"
-            :disabled="searching"
-          >
-            {{ searching ? '搜寻中...' : '搜寻' }}
-          </button>
+          <div class="search-dialog-footer">
+            <button 
+              class="custom-btn btn-search"
+              @click="searchFriend"
+              :disabled="searching"
+            >
+              {{ searching ? '搜寻中...' : '搜寻' }}
+            </button>
+            <button 
+              class="custom-btn btn-cancel-white"
+              @click="searchDialogVisible = false"
+            >
+              取消
+            </button>
+          </div>
         </template>
       </el-dialog>
 
@@ -133,7 +135,7 @@
             {{ actionLoading ? '处理中...' : getButtonText() }}
           </button>
           <button 
-            class="custom-btn btn-cancel"
+            class="custom-btn btn-cancel-white"
             @click="cancelSearch"
           >
             取消
@@ -338,28 +340,28 @@ const getButtonClass = () => {
   if (friendRequestStatus.value === 0) return 'btn-generate'
   if (friendRequestStatus.value === 1) return 'btn-warning'
   if (friendRequestStatus.value === 2) return 'btn-success'
-  if (friendRequestStatus.value === 3) return 'btn-danger'
+  if (friendRequestStatus.value === 3) return 'btn-generate' // 已拒绝改为绿色，可以再次申请
   return 'btn-generate'
 }
 
 // 获取按钮文本
 const getButtonText = () => {
   if (friendRequestStatus.value === 0) return '申请好友'
-  if (friendRequestStatus.value === 1) return '待对方处理'
+  if (friendRequestStatus.value === 1) return '待通过'
   if (friendRequestStatus.value === 2) return '已是好友'
-  if (friendRequestStatus.value === 3) return '申请已拒绝'
+  if (friendRequestStatus.value === 3) return '再次申请'
   return '申请好友'
 }
 
 // 处理好友操作
 const handleFriendAction = async () => {
-  if (friendRequestStatus.value === 0) {
-    // 发送好友申请
+  if (friendRequestStatus.value === 0 || friendRequestStatus.value === 3) {
+    // 发送好友申请（未申请或已拒绝都可以申请）
     await sendFriendRequest()
+  } else if (friendRequestStatus.value === 1) {
+    ElMessage.info('申请已发送，请等待对方处理')
   } else if (friendRequestStatus.value === 2) {
     ElMessage.info('你们已经是好友了')
-  } else if (friendRequestStatus.value === 3) {
-    ElMessage.info('申请已被拒绝')
   }
 }
 
@@ -397,8 +399,10 @@ const cancelSearch = () => {
 
 <style lang="scss" scoped>
 .search-friends {
-  padding: 20px;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
   background-color: var(--bg-primary);
+  padding: 20px;
 
   .content-wrapper {
     max-width: 600px;
@@ -409,13 +413,14 @@ const cancelSearch = () => {
   .custom-btn {
     min-width: 150px;
     padding: 10px 20px;
-    border: none;
+    border: 3px solid #d3d3d3;
     border-radius: 4px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     &:disabled {
       opacity: 0.6;
@@ -497,6 +502,23 @@ const cancelSearch = () => {
 
       &:active:not(:disabled) {
         background-color: #dd001b;
+      }
+    }
+
+    &.btn-cancel-white {
+      background-color: white;
+      color: #333;
+      border-color: #d3d3d3;
+
+      &:hover:not(:disabled) {
+        background-color: #f56c6c;
+        color: white;
+        border-color: #f56c6c;
+      }
+
+      &:active:not(:disabled) {
+        background-color: #dd001b;
+        border-color: #dd001b;
       }
     }
   }
@@ -667,13 +689,31 @@ const cancelSearch = () => {
     padding: 20px 0;
   }
 
+  .search-dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  :deep(.el-dialog__footer) {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+  }
+
   // 结果对话框
   .result-dialog-content {
     padding: 20px 0;
+    display: flex;
+    justify-content: center;
 
     .user-card {
+      width: 100%;
+      max-width: 300px;
+
       .user-header {
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 15px;
 
@@ -687,6 +727,7 @@ const cancelSearch = () => {
 
         .user-info {
           flex: 1;
+          text-align: center;
 
           .user-id {
             font-size: 12px;

@@ -72,13 +72,40 @@ const router = createRouter({
           component: () => import("@/views/admin/FileList.vue")
         },
         {
-          path: '/friend',
-          name: '好友',
+          path: '/friend/myFriends',
+          name: '我的好友',
           meta: {
             needLogin: true,
             menuCode: "friend"
           },
-          component: () => import("@/views/Friend.vue")
+          component: () => import("@/views/friend/MyFriends.vue")
+        },
+        {
+          path: '/friend/search',
+          name: '搜寻好友',
+          meta: {
+            needLogin: true,
+            menuCode: "friend"
+          },
+          component: () => import("@/views/friend/SearchFriends.vue")
+        },
+        {
+          path: '/friend/requests',
+          name: '好友申请',
+          meta: {
+            needLogin: true,
+            menuCode: "friend"
+          },
+          component: () => import("@/views/friend/FriendRequests.vue")
+        },
+        {
+          path: '/family',
+          name: '家庭',
+          meta: {
+            needLogin: true,
+            menuCode: "family"
+          },
+          component: () => import("@/views/Family.vue")
         },
       ]
     },

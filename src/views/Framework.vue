@@ -3,7 +3,7 @@
     <div class="header">
       <div class="logo">
         <img src="/icon.png" alt="Homic" class="logo-icon" />
-        <span class="name">Homic 家庭云存储服务</span>
+        <span class="name">Homic 家庭云存储服务 v1.0.1</span>
       </div>
       <div class="right-panel">
         <el-popover
@@ -164,6 +164,7 @@ import shareIcon from '@/assets/icon-image/side-item/share.png'
 import recoveryIcon from '@/assets/icon-image/side-item/recovery.png'
 import settingsIcon from '@/assets/icon-image/side-item/settings.png'
 import friendsIcon from '@/assets/icon-image/side-item/friends.png'
+import familyIcon from '@/assets/icon-image/side-item/family.png'
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
@@ -176,6 +177,7 @@ const iconMap = {
   recovery: recoveryIcon,
   settings: settingsIcon,
   friends: friendsIcon,
+  family: familyIcon,
 }
 
 // 获取侧边栏图标
@@ -265,15 +267,36 @@ const menus = [
     ],
   },
   {
-    path: "/friend",
+    path: "/friend/myFriends",
     icon: "friends",
     name: "好友",
     menuCode: "friend",
     allShow: true,
     children: [
       {
+        name: "我的好友",
+        path: "/friend/myFriends",
+      },
+      {
         name: "搜寻好友",
-        path: "/friend",
+        path: "/friend/search",
+      },
+      {
+        name: "好友申请",
+        path: "/friend/requests",
+      },
+    ],
+  },
+  {
+    path: "/family",
+    icon: "family",
+    name: "家庭",
+    menuCode: "family",
+    allShow: true,
+    children: [
+      {
+        name: "家庭管理",
+        path: "/family",
       },
     ],
   },
@@ -537,7 +560,7 @@ getUseSpace();
             width: 28px;
             height: 28px;
             object-fit: contain;
-            opacity: 0.4;
+            opacity: 0.67;
             transition: opacity 0.3s ease, transform 0.3s ease;
           }
         }
@@ -545,7 +568,7 @@ getUseSpace();
       .active {
         .side-icon {
           opacity: 1;
-          transform: scale(1.1);
+          transform: scale(1.3);
         }
         .text {
           color: #06a7ff;

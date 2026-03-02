@@ -1,3 +1,13 @@
+/* 钉钉字体定义 */
+@font-face {
+    font-family: 'DingTalk';
+    src: url('@/assets/character/dingding/BiSnS0UaNQsj.woff2') format('woff2'),
+         url('@/assets/character/dingding/BiSnS0UaNQsj.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -33,6 +43,11 @@ body {
     margin: 0px;
     font-size: 14px;
     color: #636d7e;
+    font-family: 'DingTalk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -41,6 +56,7 @@ body {
     border: 0;
     outline: 0;
     vertical-align: middle;
+    font-family: inherit;
 }
 
 .a-link {

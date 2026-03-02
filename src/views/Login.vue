@@ -451,14 +451,15 @@ const qqLogin = async () => {
 <style lang="scss" scoped>
 .login-body {
   height: calc(100vh);
-  background-size: cover;
   background: url("../assets/login_bg.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
   display: flex;
   .bg {
     flex: 1;
-    background-size: cover;
+    background-size: 560px;
     background-position: center;
-    background-size: 800px;
     background-repeat: no-repeat;
     background-image: url("../assets/login_img.png");
   }
@@ -469,7 +470,8 @@ const qqLogin = async () => {
     .login-register {
       padding: 25px;
       background: #fff;
-      border-radius: 5px;
+      border-radius: 15px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       .login-title {
         text-align: center;
         font-size: 18px;
