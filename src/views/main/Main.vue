@@ -48,6 +48,15 @@
             </template>
           </el-input>
         </div>
+        <el-select v-model="sortType" placeholder="排序方式" @change="sortFiles" style="width: 150px; margin-left: 10px;">
+          <el-option label="按名称排序" value="name"></el-option>
+          <el-option label="按创建时间" value="createTime"></el-option>
+          <el-option label="按修改时间" value="updateTime"></el-option>
+          <el-option label="按文件类型" value="type"></el-option>
+        </el-select>
+        <div class="sort-btn-wrapper" @click="toggleSortOrder" :title="getSortOrderTitle()">
+          <img :src="getSortIcon()" alt="排序" class="sort-icon" />
+        </div>
         <div class="iconfont icon-refresh" @click="loadDataList"></div>
       </div>
       <!--导航-->
@@ -181,6 +190,12 @@ import CategoryInfo from "@/js/CategoryInfo.js";
 import FileShare from "./ShareFile.vue";
 import { ref, reactive, getCurrentInstance, nextTick, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
+
+// 导入排序图标
+import sortAscIcon from '@/assets/icon-image/main/sort/asc.png';
+import sortDescIcon from '@/assets/icon-image/main/sort/desc.png';
+import sortUnsortIcon from '@/assets/icon-image/main/sort/unsort.png';
+
 const { proxy } = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
@@ -251,6 +266,91 @@ const fileNameFuzzy = ref();
 const showLoading = ref(true);
 const category = ref();
 
+// 排序相关
+const sortType = ref('createTime'); // 默认按创建时间排序
+const sortOrder = ref('desc'); // 默认降序（最新的在前）
+
+// 获取排序图标
+const getSortIcon = () => {
+  if (sortOrder.value === 'asc') {
+    return sortAscIcon;
+  } else if (sortOrder.value === 'desc') {
+    return sortDescIcon;
+  } else {
+    return sortUnsortIcon;
+  }
+};
+
+// 获取排序提示文字
+const getSortOrderTitle = () => {
+  if (sortOrder.value === 'asc') {
+    return '升序 - 点击切换为降序';
+  } else {
+    return '降序 - 点击切换为升序';
+  }
+};
+
+// 切换排序顺序
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  sortFiles();
+};
+
+// 排序函数
+const sortFiles = () => {
+  if (!tableData.value.list || tableData.value.list.length === 0) {
+    return;
+  }
+  
+  const list = [...tableData.value.list];
+  
+  list.sort((a, b) => {
+    let compareResult = 0;
+    
+    // 文件夹始终排在前面
+    if (a.folderType !== b.folderType) {
+      return b.folderType - a.folderType;
+    }
+    
+    switch (sortType.value) {
+      case 'name':
+        // 按名称排序
+        compareResult = a.fileName.localeCompare(b.fileName, 'zh-CN');
+        break;
+      case 'createTime':
+        // 按创建时间排序
+        const createTimeA = new Date(a.createTime).getTime();
+        const createTimeB = new Date(b.createTime).getTime();
+        compareResult = createTimeA - createTimeB;
+        break;
+      case 'updateTime':
+        // 按修改时间排序
+        const updateTimeA = new Date(a.lastUpdateTime).getTime();
+        const updateTimeB = new Date(b.lastUpdateTime).getTime();
+        compareResult = updateTimeA - updateTimeB;
+        break;
+      case 'type':
+        // 按文件类型排序（文件夹已经在前面了，这里只排序文件）
+        if (a.folderType === 0 && b.folderType === 0) {
+          // 获取文件扩展名
+          const extA = a.fileName.substring(a.fileName.lastIndexOf('.') + 1).toLowerCase();
+          const extB = b.fileName.substring(b.fileName.lastIndexOf('.') + 1).toLowerCase();
+          compareResult = extA.localeCompare(extB);
+          // 如果扩展名相同，再按名称排序
+          if (compareResult === 0) {
+            compareResult = a.fileName.localeCompare(b.fileName, 'zh-CN');
+          }
+        }
+        break;
+    }
+    
+    // 根据排序顺序返回结果
+    return sortOrder.value === 'asc' ? compareResult : -compareResult;
+  });
+  
+  tableData.value.list = list;
+};
+
 const loadDataList = async () => {
   let params = {
     pageNo: tableData.value.pageNo,
@@ -272,6 +372,11 @@ const loadDataList = async () => {
   }
   tableData.value = result.data;
   editing.value = false;
+  
+  // 加载完数据后自动排序
+  nextTick(() => {
+    sortFiles();
+  });
 };
 
 //展示操作按钮

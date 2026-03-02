@@ -206,7 +206,7 @@ const addFile = async (file, filePid) => {
   }
   uploadFile(md5FileUid);
 };
-defineExpose({ addFile });
+defineExpose({ addFile, fileList });
 
 //开始上传
 const startUpload = (uid) => {

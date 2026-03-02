@@ -6,25 +6,33 @@
         <span class="name">Homic 家庭云存储服务 v1.0.1</span>
       </div>
       <div class="right-panel">
-        <el-popover
-          :width="800"
-          trigger="click"
-          v-model:visible="showUploader"
-          :offset="20"
-          transition="none"
-          :hide-after="0"
-          :popper-style="{ padding: '0px' }"
-        >
-          <template #reference>
-            <span class="iconfont icon-transfer"></span>
-          </template>
-          <template #default>
-            <Uploader
-              ref="uploaderRef"
-              @uploadCallback="uploadCallbackHandler"
-            ></Uploader>
-          </template>
-        </el-popover>
+        <div class="upload-section">
+          <span v-if="uploadStats.uploading > 0" class="upload-progress-text">
+            上传中 {{ uploadStats.uploading }}/{{ uploadStats.total }}
+          </span>
+          <el-popover
+            :width="800"
+            trigger="click"
+            v-model:visible="showUploader"
+            :offset="20"
+            transition="none"
+            :hide-after="0"
+            :popper-style="{ padding: '0px' }"
+          >
+            <template #reference>
+              <div class="upload-icon-wrapper">
+                <img :src="uploadIcon" alt="上传" class="upload-icon" />
+                <span v-if="uploadStats.uploading > 0" class="upload-badge">{{ uploadStats.uploading }}</span>
+              </div>
+            </template>
+            <template #default>
+              <Uploader
+                ref="uploaderRef"
+                @uploadCallback="uploadCallbackHandler"
+              ></Uploader>
+            </template>
+          </el-popover>
+        </div>
 
         <el-tooltip :content="isDark ? '切换为浅色模式' : '切换为深色模式'" placement="bottom">
           <el-button
@@ -84,14 +92,16 @@
         </div>
         <div class="menu-sub-list">
           <div
-            @click="jump(sub)"
+            @click="handleSubMenuClick($event, sub)"
             :class="['menu-item-sub', currentPath == sub.path ? 'active' : '']"
             v-for="sub in currentMenu.children"
           >
-            <span
-              :class="['iconfont', 'icon-' + sub.icon]"
-              v-if="sub.icon"
-            ></span>
+            <img 
+              v-if="sub.icon" 
+              :src="getSubItemIcon(sub.icon)" 
+              :alt="sub.name" 
+              class="sub-icon" 
+            />
             <span class="text">{{ sub.name }}</span>
           </div>
           <div class="tips" v-if="currentMenu && currentMenu.tips">
@@ -152,6 +162,7 @@ import {
   watch,
   nextTick,
   computed,
+  onUnmounted,
 } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useThemeStore } from '@/stores/useThemeStore'
@@ -165,6 +176,17 @@ import recoveryIcon from '@/assets/icon-image/side-item/recovery.png'
 import settingsIcon from '@/assets/icon-image/side-item/settings.png'
 import friendsIcon from '@/assets/icon-image/side-item/friends.png'
 import familyIcon from '@/assets/icon-image/side-item/family.png'
+
+// 导入主页子菜单图标
+import allIcon from '@/assets/icon-image/main/all.png'
+import videoIcon from '@/assets/icon-image/main/video.png'
+import musicIcon from '@/assets/icon-image/main/mp3.png'
+import imageIcon from '@/assets/icon-image/main/picture.png'
+import docIcon from '@/assets/icon-image/main/doc.png'
+import othersIcon from '@/assets/icon-image/main/other.png'
+
+// 导入上传图标
+import uploadIcon from '@/assets/icon-image/upload-head.png'
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
@@ -180,9 +202,24 @@ const iconMap = {
   family: familyIcon,
 }
 
+// 子菜单图标映射
+const subIconMap = {
+  all: allIcon,
+  video: videoIcon,
+  music: musicIcon,
+  image: imageIcon,
+  doc: docIcon,
+  more: othersIcon,
+}
+
 // 获取侧边栏图标
 const getSideItemIcon = (iconName) => {
   return iconMap[iconName] || fileIcon
+}
+
+// 获取子菜单图标
+const getSubItemIcon = (iconName) => {
+  return subIconMap[iconName] || allIcon
 }
 
 // 主题相关
@@ -199,6 +236,57 @@ const api = {
 
 //显示上传窗口
 const showUploader = ref(false);
+
+// 上传进度统计
+const uploadStats = ref({
+  uploading: 0,  // 正在上传的文件数
+  total: 0,      // 总文件数
+});
+
+// 更新上传统计
+const updateUploadStats = () => {
+  const uploader = uploaderRef.value;
+  if (!uploader || !uploader.fileList) {
+    uploadStats.value = { uploading: 0, total: 0 };
+    return;
+  }
+  
+  const fileList = uploader.fileList;
+  uploadStats.value.total = fileList.length;
+  uploadStats.value.uploading = fileList.filter(item => 
+    item.status === 'uploading' || item.status === 'init'
+  ).length;
+};
+
+// 定时更新上传统计
+let uploadStatsTimer = null;
+const startUploadStatsTimer = () => {
+  if (uploadStatsTimer) return;
+  uploadStatsTimer = setInterval(() => {
+    updateUploadStats();
+  }, 500);
+};
+
+const stopUploadStatsTimer = () => {
+  if (uploadStatsTimer) {
+    clearInterval(uploadStatsTimer);
+    uploadStatsTimer = null;
+  }
+};
+
+// 监听上传窗口显示状态
+watch(showUploader, (newVal) => {
+  if (newVal) {
+    startUploadStatsTimer();
+  } else {
+    stopUploadStatsTimer();
+  }
+});
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  stopUploadStatsTimer();
+});
 
 //添加文件
 const uploaderRef = ref();
@@ -360,6 +448,26 @@ const jump = (data) => {
   router.push(data.path);
 };
 
+// 处理子菜单点击，添加动画效果
+const handleSubMenuClick = (event, data) => {
+  const target = event.currentTarget;
+  const icon = target.querySelector('.sub-icon');
+  const text = target.querySelector('.text');
+  
+  // 添加点击动画类
+  if (icon) icon.classList.add('click-animate');
+  if (text) text.classList.add('click-animate');
+  
+  // 动画结束后移除类
+  setTimeout(() => {
+    if (icon) icon.classList.remove('click-animate');
+    if (text) text.classList.remove('click-animate');
+  }, 400);
+  
+  // 执行跳转
+  jump(data);
+};
+
 const setMenu = (menuCode, path) => {
   const menu = menus.find((item) => {
     return item.menuCode === menuCode;
@@ -466,6 +574,61 @@ getUseSpace();
     display: flex;
     align-items: center;
     gap: 15px;
+    
+    .upload-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      
+      .upload-progress-text {
+        font-size: 13px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      
+      .upload-icon-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        
+        .upload-icon {
+          width: 24px;
+          height: 24px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          &:hover {
+            transform: scale(1.15);
+            opacity: 0.8;
+          }
+        }
+        
+        .upload-badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background-color: #f56c6c;
+          color: white;
+          font-size: 11px;
+          font-weight: bold;
+          padding: 2px 5px;
+          border-radius: 10px;
+          min-width: 18px;
+          text-align: center;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+    
+    .upload-icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      &:hover {
+        transform: scale(1.15);
+        opacity: 0.8;
+      }
+    }
     .icon-transfer {
       cursor: pointer;
       color: var(--text-primary);
@@ -586,24 +749,68 @@ getUseSpace();
         border-radius: 5px;
         cursor: pointer;
         color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        padding: 0 10px;
         &:hover {
-          background: var(--component-hover-bg);
+          background: var(--component-active-bg);
+          padding-left: 5px;
+          .sub-icon {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          .text {
+            transform: scale(1.2);
+            font-weight: 600;
+          }
         }
-        .iconfont {
-          font-size: 14px;
-          margin-right: 20px;
+        .sub-icon {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+          opacity: 0.7;
+          transition: all 0.3s ease;
+          
+          &.click-animate {
+            animation: clickBounce 0.4s ease;
+          }
         }
         .text {
           font-size: 13px;
+          transition: all 0.3s ease;
+          
+          &.click-animate {
+            animation: clickBounce 0.4s ease;
+            font-weight: 600;
+          }
         }
       }
       .active {
-        background: #eef9fe;
-        .iconfont {
-          color: #05a1f5;
+        background: var(--component-active-bg);
+        padding-left: 5px;
+        .sub-icon {
+          opacity: 1;
+          transform: scale(1.2);
         }
         .text {
           color: #05a1f5;
+          font-weight: 600;
+          transform: scale(1.2);
+        }
+      }
+      
+      @keyframes clickBounce {
+        0% {
+          transform: scale(1.2);
+        }
+        50% {
+          transform: scale(1.4);
+        }
+        100% {
+          transform: scale(1.2);
         }
       }
 

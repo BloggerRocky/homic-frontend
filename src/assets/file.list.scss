@@ -18,6 +18,31 @@
             cursor: pointer;
             margin-left: 10px;
         }
+        
+        .sort-btn-wrapper {
+            cursor: pointer;
+            margin-left: 5px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            
+            &:hover {
+                background-color: #f5f7fa;
+            }
+            
+            .sort-icon {
+                width: 20px;
+                height: 20px;
+                transition: opacity 0.3s ease;
+                
+                &:hover {
+                    opacity: 0.8;
+                }
+            }
+        }
 
         .not-allow {
             background: #d2d2d2 !important;
