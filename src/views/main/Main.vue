@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @contextmenu="handleContextMenu">
     <div class="top">
       <div class="top-op">
         <div class="btn">
@@ -19,22 +19,6 @@
         <el-button type="success" @click="newFolder" v-if="category == 'all'">
           <span class="iconfont icon-folder-add"></span>
           新建文件夹
-        </el-button>
-        <el-button
-          @click="delFileBatch"
-          type="danger"
-          :disabled="selectFileIdList.length == 0"
-        >
-          <span class="iconfont icon-del"></span>
-          批量删除
-        </el-button>
-        <el-button
-          @click="moveFolderBatch"
-          type="warning"
-          :disabled="selectFileIdList.length == 0"
-        >
-          <span class="iconfont icon-move"></span>
-          批量移动
         </el-button>
         <div class="search-panel">
           <el-input
@@ -62,7 +46,7 @@
       <!--导航-->
       <Navigation ref="navigationRef" @navChange="navChange"></Navigation>
     </div>
-    <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
+    <div class="file-list" v-if="tableData.list && tableData.list.length > 0" @contextmenu="handleContextMenu">
       <Table
         ref="dataTableRef"
         :columns="columns"
@@ -182,12 +166,76 @@
     ></FolderSelect>
     <!--分享-->
     <FileShare ref="shareRef"></FileShare>
+    
+    <!--自定义右键菜单-->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu"
+      :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="contextMenuUpload">
+        <span class="iconfont icon-upload"></span>
+        <span>上传文件至此</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuNewFolder" v-if="category == 'all'">
+        <span class="iconfont icon-folder-add"></span>
+        <span>新建文件夹</span>
+      </div>
+      <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
+      
+      <!-- 分享给好友 - 只对文件有效，不包含文件夹 -->
+      <div class="context-menu-item" @click="contextMenuShareToFriend" v-if="shouldShowShareToFriend()">
+        <span class="iconfont icon-share1"></span>
+        <span>分享给好友</span>
+      </div>
+      
+      <!-- 生成分享码 - 单个文件或文件夹 -->
+      <div class="context-menu-item" @click="contextMenuGenerateShareCode" v-if="shouldShowGenerateShareCode()">
+        <span class="iconfont icon-link"></span>
+        <span>生成分享码</span>
+      </div>
+      
+      <!-- 下载 - 文件或多个文件 -->
+      <div class="context-menu-item" @click="contextMenuDownload" v-if="shouldShowDownload()">
+        <span class="iconfont icon-download"></span>
+        <span>{{ getDownloadText() }}</span>
+      </div>
+      
+      <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
+      
+      <div class="context-menu-item" @click="contextMenuDelete" v-if="contextMenuFile || selectFileIdList.length > 0">
+        <span class="iconfont icon-del"></span>
+        <span>{{ selectFileIdList.length > 0 ? `删除 (${selectFileIdList.length}项)` : '删除' }}</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuMove" v-if="contextMenuFile || selectFileIdList.length > 0">
+        <span class="iconfont icon-move"></span>
+        <span>{{ selectFileIdList.length > 0 ? `移动 (${selectFileIdList.length}项)` : '移动' }}</span>
+      </div>
+    </div>
+    
+    <!--隐藏的上传input用于右键菜单上传-->
+    <input 
+      ref="contextUploadInput" 
+      type="file" 
+      multiple 
+      :accept="fileAccept"
+      style="display: none"
+      @change="handleContextUpload"
+    />
+    
+    <!--好友选择对话框-->
+    <FriendSelectDialog
+      ref="friendSelectDialogRef"
+      @confirm="handleFriendShareConfirm"
+    />
   </div>
 </template>
 
 <script setup>
 import CategoryInfo from "@/js/CategoryInfo.js";
 import FileShare from "./ShareFile.vue";
+import FriendSelectDialog from "../friend/FriendSelectDialog.vue";
 import { ref, reactive, getCurrentInstance, nextTick, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
@@ -612,7 +660,19 @@ const download = async (row) => {
   if (!result) {
     return;
   }
-  window.location.href = api.download + "/" + result.data;
+  
+  // 使用动态创建的 a 标签触发下载，支持多文件下载
+  const downloadUrl = api.download + "/" + result.data;
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  
+  // 延迟移除 a 标签
+  setTimeout(() => {
+    document.body.removeChild(link);
+  }, 100);
 };
 
 //分享
@@ -620,8 +680,276 @@ const shareRef = ref();
 const share = (row) => {
   shareRef.value.show(row);
 };
+
+// 右键菜单相关
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuFile = ref(null);
+const contextUploadInput = ref(null);
+
+// 处理右键菜单
+const handleContextMenu = (event) => {
+  event.preventDefault();
+  
+  // 检查是否点击在文件行上
+  let target = event.target;
+  let fileRow = null;
+  
+  // 向上查找是否在文件行内
+  while (target && target !== event.currentTarget) {
+    if (target.classList && target.classList.contains('file-item')) {
+      // 找到对应的文件数据
+      const fileName = target.querySelector('.file-name span');
+      if (fileName) {
+        const fileNameText = fileName.textContent.trim();
+        fileRow = tableData.value.list.find(item => item.fileName === fileNameText);
+      }
+      break;
+    }
+    target = target.parentElement;
+  }
+  
+  contextMenuFile.value = fileRow;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+  
+  // 点击其他地方关闭菜单
+  const closeMenu = () => {
+    contextMenuVisible.value = false;
+    document.removeEventListener('click', closeMenu);
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+};
+
+// 右键菜单 - 上传文件
+const contextMenuUpload = () => {
+  contextMenuVisible.value = false;
+  contextUploadInput.value.click();
+};
+
+// 处理右键菜单上传
+const handleContextUpload = (event) => {
+  const files = event.target.files;
+  if (files && files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      addFile({ file: files[i] });
+    }
+  }
+  // 清空input以便下次可以选择相同文件
+  event.target.value = '';
+};
+
+// 右键菜单 - 新建文件夹
+const contextMenuNewFolder = () => {
+  contextMenuVisible.value = false;
+  newFolder();
+};
+
+// 右键菜单 - 删除
+const contextMenuDelete = () => {
+  contextMenuVisible.value = false;
+  // 优先处理多选对象
+  if (selectFileIdList.value.length > 0) {
+    delFileBatch();
+  } else if (contextMenuFile.value) {
+    delFile(contextMenuFile.value);
+  }
+};
+
+// 右键菜单 - 移动
+const contextMenuMove = () => {
+  contextMenuVisible.value = false;
+  // 优先处理多选对象
+  if (selectFileIdList.value.length > 0) {
+    moveFolderBatch();
+  } else if (contextMenuFile.value) {
+    moveFolder(contextMenuFile.value);
+  }
+};
+
+// 判断是否应该显示文件操作菜单
+const shouldShowFileOperations = () => {
+  return contextMenuFile.value || selectFileIdList.value.length > 0;
+};
+
+// 判断是否显示"分享给好友"
+const shouldShowShareToFriend = () => {
+  // 有多选文件时
+  if (selectFileIdList.value.length > 0) {
+    // 检查是否所有选中的都是文件（不包含文件夹）
+    return selectFileList.value.every(file => file.folderType === 0);
+  }
+  // 右键单个文件时
+  if (contextMenuFile.value) {
+    return contextMenuFile.value.folderType === 0;
+  }
+  return false;
+};
+
+// 判断是否显示"生成分享码"
+const shouldShowGenerateShareCode = () => {
+  // 只有单个文件或文件夹时显示
+  if (selectFileIdList.value.length === 1) {
+    return true;
+  }
+  // 右键单个文件或文件夹时
+  if (contextMenuFile.value && selectFileIdList.value.length === 0) {
+    return true;
+  }
+  return false;
+};
+
+// 判断是否显示"下载"
+const shouldShowDownload = () => {
+  // 有多选时
+  if (selectFileIdList.value.length > 0) {
+    // 检查是否所有选中的都是文件（不包含文件夹）
+    return selectFileList.value.every(file => file.folderType === 0);
+  }
+  // 右键单个文件时
+  if (contextMenuFile.value) {
+    return contextMenuFile.value.folderType === 0;
+  }
+  return false;
+};
+
+// 获取下载按钮文本
+const getDownloadText = () => {
+  const count = selectFileIdList.value.length;
+  if (count > 1) {
+    return `下载 (${count}项)`;
+  }
+  return '下载';
+};
+
+// 右键菜单 - 分享给好友
+const friendSelectDialogRef = ref();
+const contextMenuShareToFriend = () => {
+  contextMenuVisible.value = false;
+  friendSelectDialogRef.value.show();
+};
+
+// 处理好友分享确认
+const handleFriendShareConfirm = async (selectedFriends) => {
+  let fileIds = [];
+  
+  if (selectFileIdList.value.length > 0) {
+    fileIds = selectFileIdList.value;
+  } else if (contextMenuFile.value) {
+    fileIds = [contextMenuFile.value.fileId];
+  }
+  
+  if (fileIds.length === 0) {
+    proxy.Message.warning('请选择要分享的文件');
+    return;
+  }
+  
+  // 为每个选中的好友分享文件
+  for (const friend of selectedFriends) {
+    try {
+      const result = await proxy.Request({
+        url: '/friendShare/shareFiles',
+        params: {
+          friendId: friend.friendId,
+          fileIds: fileIds.join(','),
+          validType: 0 // 默认永久有效
+        }
+      });
+      
+      if (result) {
+        proxy.Message.success(`已分享给 ${friend.remark || friend.nickName}`);
+      }
+    } catch (error) {
+      console.error('分享失败:', error);
+    }
+  }
+};
+
+// 右键菜单 - 生成分享码
+const contextMenuGenerateShareCode = () => {
+  contextMenuVisible.value = false;
+  
+  let fileToShare = null;
+  
+  if (selectFileIdList.value.length === 1) {
+    fileToShare = selectFileList.value[0];
+  } else if (contextMenuFile.value) {
+    fileToShare = contextMenuFile.value;
+  }
+  
+  if (fileToShare) {
+    share(fileToShare);
+  }
+};
+
+// 右键菜单 - 下载
+const contextMenuDownload = async () => {
+  contextMenuVisible.value = false;
+  
+  if (selectFileIdList.value.length > 0) {
+    // 批量下载 - 使用延迟避免浏览器阻止
+    for (let i = 0; i < selectFileList.value.length; i++) {
+      const file = selectFileList.value[i];
+      if (file.folderType === 0) {
+        await downloadWithDelay(file, i * 300); // 每个下载间隔300ms
+      }
+    }
+  } else if (contextMenuFile.value && contextMenuFile.value.folderType === 0) {
+    download(contextMenuFile.value);
+  }
+};
+
+// 带延迟的下载函数
+const downloadWithDelay = (file, delay) => {
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      await download(file);
+      resolve();
+    }, delay);
+  });
+};
 </script>
 
 <style lang="scss" scoped>
 @import "@/assets/file.list.scss";
+
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  min-width: 160px;
+  padding: 5px 0;
+  
+  .context-menu-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #606266;
+    transition: all 0.3s;
+    
+    .iconfont {
+      font-size: 16px;
+    }
+    
+    &:hover {
+      background-color: #f5f7fa;
+      color: #409eff;
+    }
+  }
+  
+  .context-menu-divider {
+    height: 1px;
+    background-color: #e4e7ed;
+    margin: 5px 0;
+  }
+}
 </style>

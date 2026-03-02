@@ -80,6 +80,12 @@ const FILE_URL_MAP = {
     createDownloadUrl: "/showShare/createDownloadUrl",
     downloadUrl: "/api/showShare/download",
   },
+  3: {
+    fileUrl: "/friendShare/getFile",
+    videoUrl: "/friendShare/ts/getVideoInfo",
+    createDownloadUrl: "/friendShare/createDownloadUrl",
+    downloadUrl: "/api/friendShare/download",
+  },
 };
 const url = ref(null);
 const createDownloadUrl = ref(null);
@@ -111,6 +117,11 @@ const showPreview = (data, showPart) => {
       _createDownloadUrl =
         _createDownloadUrl + "/" + data.userId + "/" + data.fileId;
     } else if (showPart == 2) {
+      _url = _url + "/" + data.shareId + "/" + data.fileId;
+      _createDownloadUrl =
+        _createDownloadUrl + "/" + data.shareId + "/" + data.fileId;
+    } else if (showPart == 3) {
+      // 好友分享预览模式
       _url = _url + "/" + data.shareId + "/" + data.fileId;
       _createDownloadUrl =
         _createDownloadUrl + "/" + data.shareId + "/" + data.fileId;

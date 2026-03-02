@@ -77,13 +77,13 @@ onUnmounted(() => {
     left: 0px;
     width: 100%;
     height: calc(100vh);
-    z-index: 200;
+    z-index: 3000;
     opacity: 0.5;
     background: #000;
     position: fixed;
   }
   .close {
-    z-index: 202;
+    z-index: 3002;
     cursor: pointer;
     position: absolute;
     top: 40px;
@@ -103,7 +103,7 @@ onUnmounted(() => {
   }
   .window-content {
     top: 0px;
-    z-index: 201;
+    z-index: 3001;
     position: absolute;
     background: #fff;
     .title {

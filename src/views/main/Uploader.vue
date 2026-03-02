@@ -1,8 +1,11 @@
 <template>
   <div class="uploader-panel">
     <div class="uploader-title">
-      <span>上传任务</span>
-      <span class="tips">（仅展示本次上传任务）</span>
+      <div class="title-left">
+        <img :src="uploadIcon" alt="上传" class="title-upload-icon" />
+        <span>上传任务</span>
+        <span class="tips">（仅展示本次上传任务）</span>
+      </div>
     </div>
     <div class="file-list">
       <div v-for="(item, index) in fileList" class="file-item">
@@ -116,6 +119,8 @@ import {
   nextTick,
 } from "vue";
 import SparkMD5 from "spark-md5";
+import uploadIcon from '@/assets/icon-image/upload-head.png';
+
 const { proxy } = getCurrentInstance();
 
 const api = {
@@ -166,6 +171,11 @@ const fileList = ref([]);
 const delList = ref([]);
 
 const addFile = async (file, filePid) => {
+  // 如果文件没有 uid，生成一个唯一的 uid
+  if (!file.uid) {
+    file.uid = Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+  }
+  
   const fileItem = {
     file: file,
     //文件UID
@@ -367,6 +377,22 @@ const getFileByUid = (uid) => {
     line-height: 40px;
     padding: 0px 10px;
     font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    .title-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      
+      .title-upload-icon {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+    }
+    
     .tips {
       font-size: 13px;
       color: rgb(169, 169, 169);

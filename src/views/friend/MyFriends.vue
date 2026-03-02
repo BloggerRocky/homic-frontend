@@ -11,6 +11,7 @@
               v-for="friend in allFriends" 
               :key="friend.friendId"
               class="friend-item"
+              @contextmenu.prevent="handleContextMenu($event, friend)"
             >
               <div class="friend-info">
                 <img 
@@ -59,6 +60,7 @@
               v-for="friend in specialFriends" 
               :key="friend.friendId"
               class="friend-item"
+              @contextmenu.prevent="handleContextMenu($event, friend)"
             >
               <div class="friend-info">
                 <img 
@@ -112,18 +114,54 @@
         <button class="dialog-btn btn-default" @click="remarkDialogVisible = false">取消</button>
       </template>
     </el-dialog>
+
+    <!-- 好友分享对话框 -->
+    <FriendShareDialog ref="shareDialogRef" />
+    
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu"
+      :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="contextMenuShare">
+        <img src="@/assets/button-image/share.png" alt="分享" class="menu-icon" />
+        <span>分享</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuRemark">
+        <img src="@/assets/button-image/remark.png" alt="备注" class="menu-icon" />
+        <span>备注</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuToggleSpecial">
+        <img 
+          :src="contextMenuFriend?.isSpecial === 1 ? followFillIcon : followIcon" 
+          alt="关注" 
+          class="menu-icon" 
+        />
+        <span>{{ contextMenuFriend?.isSpecial === 1 ? '取消关注' : '特别关注' }}</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item danger" @click="contextMenuDelete">
+        <img src="@/assets/button-image/delete.png" alt="删除" class="menu-icon" />
+        <span>删除</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, getCurrentInstance, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import FriendShareDialog from './FriendShareDialog.vue'
 
 // 导入图片
 import followIcon from '@/assets/button-image/follow.png'
 import followFillIcon from '@/assets/button-image/follow-fill.png'
 
 const { proxy } = getCurrentInstance()
+
+const shareDialogRef = ref(null)
 
 const api = {
   getMyFriends: '/friend/getMyFriends',
@@ -142,6 +180,62 @@ const timestamp = ref(Date.now())
 const remarkDialogVisible = ref(false)
 const remarkInput = ref('')
 const currentFriend = ref(null)
+
+// 右键菜单相关
+const contextMenuVisible = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuFriend = ref(null)
+
+// 处理右键菜单
+const handleContextMenu = (event, friend) => {
+  event.preventDefault()
+  
+  contextMenuFriend.value = friend
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+  contextMenuVisible.value = true
+  
+  // 点击其他地方关闭菜单
+  const closeMenu = () => {
+    contextMenuVisible.value = false
+    document.removeEventListener('click', closeMenu)
+  }
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu)
+  }, 0)
+}
+
+// 右键菜单 - 分享
+const contextMenuShare = () => {
+  contextMenuVisible.value = false
+  if (contextMenuFriend.value) {
+    shareFriend(contextMenuFriend.value)
+  }
+}
+
+// 右键菜单 - 备注
+const contextMenuRemark = () => {
+  contextMenuVisible.value = false
+  if (contextMenuFriend.value) {
+    editRemark(contextMenuFriend.value)
+  }
+}
+
+// 右键菜单 - 切换关注
+const contextMenuToggleSpecial = () => {
+  contextMenuVisible.value = false
+  if (contextMenuFriend.value) {
+    toggleSpecial(contextMenuFriend.value)
+  }
+}
+
+// 右键菜单 - 删除
+const contextMenuDelete = () => {
+  contextMenuVisible.value = false
+  if (contextMenuFriend.value) {
+    confirmDelete(contextMenuFriend.value)
+  }
+}
 
 // 获取所有好友
 const getAllFriends = async () => {
@@ -177,9 +271,9 @@ const getSpecialFriends = async () => {
   }
 }
 
-// 分享好友（暂不实现）
+// 分享好友
 const shareFriend = (friend) => {
-  ElMessage.info('分享功能开发中...')
+  shareDialogRef.value.show(friend)
 }
 
 // 编辑备注
@@ -497,6 +591,59 @@ onMounted(() => {
     display: flex;
     gap: 10px;
     justify-content: center;
+  }
+  
+  .context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    min-width: 160px;
+    padding: 8px 0;
+    
+    .context-menu-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #606266;
+      transition: all 0.3s;
+      
+      .menu-icon {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+        opacity: 0.7;
+      }
+      
+      &:hover {
+        background-color: #f5f7fa;
+        color: #409eff;
+        
+        .menu-icon {
+          opacity: 1;
+        }
+      }
+      
+      &.danger {
+        color: #f56c6c;
+        
+        &:hover {
+          background-color: #fef0f0;
+          color: #f56c6c;
+        }
+      }
+    }
+    
+    .context-menu-divider {
+      height: 1px;
+      background-color: #e4e7ed;
+      margin: 5px 0;
+    }
   }
 }
 </style>

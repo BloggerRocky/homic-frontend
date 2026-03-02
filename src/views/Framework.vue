@@ -10,38 +10,11 @@
           <span v-if="uploadStats.uploading > 0" class="upload-progress-text">
             上传中 {{ uploadStats.uploading }}/{{ uploadStats.total }}
           </span>
-          <el-popover
-            :width="800"
-            trigger="click"
-            v-model:visible="showUploader"
-            :offset="20"
-            transition="none"
-            :hide-after="0"
-            :popper-style="{ padding: '0px' }"
-          >
-            <template #reference>
-              <div class="upload-icon-wrapper">
-                <img :src="uploadIcon" alt="上传" class="upload-icon" />
-                <span v-if="uploadStats.uploading > 0" class="upload-badge">{{ uploadStats.uploading }}</span>
-              </div>
-            </template>
-            <template #default>
-              <Uploader
-                ref="uploaderRef"
-                @uploadCallback="uploadCallbackHandler"
-              ></Uploader>
-            </template>
-          </el-popover>
+          <div class="upload-icon-wrapper" @click="toggleUploader" ref="uploadIconRef">
+            <img :src="uploadIcon" alt="上传" class="upload-icon" />
+            <span v-if="uploadStats.uploading > 0" class="upload-badge">{{ uploadStats.uploading }}</span>
+          </div>
         </div>
-
-        <el-tooltip :content="isDark ? '切换为浅色模式' : '切换为深色模式'" placement="bottom">
-          <el-button
-            :icon="isDark ? Sunny : Moon"
-            circle
-            @click="toggleTheme"
-            class="theme-btn"
-          />
-        </el-tooltip>
 
         <el-dropdown>
           <div class="user-info">
@@ -72,23 +45,37 @@
     <div class="body">
       <div class="left-sider">
         <div class="menu-list">
-          <template v-for="item in menus">
-            <div
-              v-if="item.allShow || (!item.allShow && userInfo.admin)"
-              @click="jump(item)"
-              :class="[
-                'menu-item',
-                item.menuCode == currentMenu.menuCode ? 'active' : '',
-              ]"
-            >
-              <div class="icon-wrapper">
-                <img :src="getSideItemIcon(item.icon)" :alt="item.name" class="side-icon" />
+          <div class="menu-items-wrapper">
+            <template v-for="item in menus">
+              <div
+                v-if="item.allShow || (!item.allShow && userInfo.admin)"
+                @click="jump(item)"
+                :class="[
+                  'menu-item',
+                  item.menuCode == currentMenu.menuCode ? 'active' : '',
+                ]"
+              >
+                <div class="icon-wrapper">
+                  <img :src="getSideItemIcon(item.icon)" :alt="item.name" class="side-icon" />
+                </div>
+                <div class="text">
+                  {{ item.name }}
+                </div>
               </div>
-              <div class="text">
-                {{ item.name }}
-              </div>
-            </div>
-          </template>
+            </template>
+          </div>
+          
+          <!-- 深色模式切换按钮 -->
+          <div class="theme-toggle-main">
+            <el-tooltip :content="isDark ? '切换为浅色模式' : '切换为深色模式'" placement="right">
+              <el-button
+                :icon="isDark ? Sunny : Moon"
+                circle
+                @click="toggleTheme"
+                class="theme-btn-main"
+              />
+            </el-tooltip>
+          </div>
         </div>
         <div class="menu-sub-list">
           <div
@@ -148,6 +135,22 @@
     ></UpdateAvatar>
     <!--修改密码-->
     <UpdatePassword ref="updatePasswordRef"></UpdatePassword>
+    
+    <!--上传对话框-->
+    <transition name="upload-dialog">
+      <div v-if="showUploader" class="upload-dialog-overlay" @click="closeUploader">
+        <div 
+          class="upload-dialog" 
+          :style="dialogStyle"
+          @click.stop
+        >
+          <Uploader
+            ref="uploaderRef"
+            @uploadCallback="uploadCallbackHandler"
+          ></Uploader>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -236,6 +239,59 @@ const api = {
 
 //显示上传窗口
 const showUploader = ref(false);
+const uploadIconRef = ref(null);
+const dialogStyle = ref({});
+
+// 切换上传对话框
+const toggleUploader = () => {
+  if (!showUploader.value) {
+    // 获取图标位置
+    const iconRect = uploadIconRef.value.getBoundingClientRect();
+    
+    // 设置对话框初始位置（从图标位置开始）
+    dialogStyle.value = {
+      top: `${iconRect.top + iconRect.height / 2}px`,
+      left: `${iconRect.left + iconRect.width / 2}px`,
+      transform: 'translate(-50%, -50%) scale(0)',
+    };
+    
+    showUploader.value = true;
+    
+    // 下一帧开始动画
+    nextTick(() => {
+      dialogStyle.value = {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%) scale(1)',
+      };
+    });
+  } else {
+    closeUploader();
+  }
+};
+
+// 关闭上传对话框
+const closeUploader = () => {
+  if (!uploadIconRef.value) {
+    showUploader.value = false;
+    return;
+  }
+  
+  // 获取图标位置
+  const iconRect = uploadIconRef.value.getBoundingClientRect();
+  
+  // 动画回到图标位置
+  dialogStyle.value = {
+    top: `${iconRect.top + iconRect.height / 2}px`,
+    left: `${iconRect.left + iconRect.width / 2}px`,
+    transform: 'translate(-50%, -50%) scale(0)',
+  };
+  
+  // 等待动画完成后隐藏
+  setTimeout(() => {
+    showUploader.value = false;
+  }, 300);
+};
 
 // 上传进度统计
 const uploadStats = ref({
@@ -292,8 +348,32 @@ onUnmounted(() => {
 const uploaderRef = ref();
 const addFile = (data) => {
   const { file, filePid } = data;
-  showUploader.value = true;
-  uploaderRef.value.addFile(file, filePid);
+  
+  if (!showUploader.value) {
+    // 获取图标位置
+    const iconRect = uploadIconRef.value.getBoundingClientRect();
+    
+    // 设置对话框初始位置
+    dialogStyle.value = {
+      top: `${iconRect.top + iconRect.height / 2}px`,
+      left: `${iconRect.left + iconRect.width / 2}px`,
+      transform: 'translate(-50%, -50%) scale(0)',
+    };
+    
+    showUploader.value = true;
+    
+    // 下一帧开始动画
+    nextTick(() => {
+      dialogStyle.value = {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%) scale(1)',
+      };
+      uploaderRef.value.addFile(file, filePid);
+    });
+  } else {
+    uploaderRef.value.addFile(file, filePid);
+  }
 };
 
 //上传文件回调
@@ -638,44 +718,6 @@ getUseSpace();
         color: #05a1f5;
       }
     }
-    .theme-btn {
-      padding: 8px;
-      min-width: 40px;
-      min-height: 40px;
-      border-radius: 50%;
-      background-color: #f0f0f0;
-      border: 1px solid #dcdfe6;
-      color: #606266;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      &:hover {
-        background-color: #e6e6e6;
-        border-color: #909399;
-      }
-      
-      &:active {
-        background-color: #d9d9d9;
-      }
-    }
-    
-    :root.dark-mode & .theme-btn {
-      background-color: #2f2f2f;
-      border-color: #3f3f46;
-      color: #e4e4e7;
-      
-      &:hover {
-        background-color: #3f3f46;
-        border-color: #52525b;
-      }
-      
-      &:active {
-        background-color: #52525b;
-      }
-    }
     
     .user-info {
       margin-right: 10px;
@@ -702,6 +744,15 @@ getUseSpace();
       box-shadow: 0 3px 10px 0 rgb(0 0 0 / 6%);
       border-right: 1px solid var(--border-light);
       background-color: var(--component-bg);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      
+      .menu-items-wrapper {
+        flex: 1;
+        overflow-y: auto;
+      }
+      
       .menu-item {
         text-align: center;
         font-size: 14px;
@@ -735,6 +786,56 @@ getUseSpace();
         }
         .text {
           color: #06a7ff;
+        }
+      }
+      
+      .theme-toggle-main {
+        padding: 20px 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-top: 1px solid var(--border-light);
+        background-color: var(--component-bg);
+        
+        .theme-btn-main {
+          padding: 8px;
+          min-width: 40px;
+          min-height: 40px;
+          border-radius: 50%;
+          background-color: #f0f0f0;
+          border: 1px solid #dcdfe6;
+          color: #606266;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          &:hover {
+            background-color: #e6e6e6;
+            border-color: #909399;
+            transform: scale(1.1);
+          }
+          
+          &:active {
+            background-color: #d9d9d9;
+            transform: scale(0.95);
+          }
+        }
+      }
+      
+      :root.dark-mode & .theme-toggle-main .theme-btn-main {
+        background-color: #2f2f2f;
+        border-color: #3f3f46;
+        color: #e4e4e7;
+        
+        &:hover {
+          background-color: #3f3f46;
+          border-color: #52525b;
+        }
+        
+        &:active {
+          background-color: #52525b;
         }
       }
     }
@@ -851,5 +952,44 @@ getUseSpace();
     padding-left: 20px;
     background-color: var(--bg-primary);
   }
+}
+
+.upload-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-dialog {
+  position: fixed;
+  width: 800px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 10000;
+}
+
+.upload-dialog-enter-active {
+  transition: opacity 0.3s ease;
+}
+
+.upload-dialog-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.upload-dialog-enter-from,
+.upload-dialog-leave-to {
+  opacity: 0;
 }
 </style>
