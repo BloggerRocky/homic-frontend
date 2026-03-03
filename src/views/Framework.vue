@@ -16,6 +16,22 @@
           </div>
         </div>
 
+        <!-- 空间信息 -->
+        <div class="space-info-header">
+          <div class="space-text">
+            {{ proxy.Utils.size2Str(useSpaceInfo.useSpace) }} / {{ proxy.Utils.size2Str(useSpaceInfo.totalSpace) }}
+          </div>
+          <div class="space-percent">
+            <el-progress
+              :percentage="Math.floor((useSpaceInfo.useSpace / useSpaceInfo.totalSpace) * 10000) / 100"
+              :show-text="false"
+              :stroke-width="6"
+              color="#409eff"
+            />
+          </div>
+          <div class="iconfont icon-refresh" @click="getUseSpace" title="刷新空间使用情况"></div>
+        </div>
+
         <el-dropdown>
           <div class="user-info">
             <div class="avatar">
@@ -93,27 +109,6 @@
           </div>
           <div class="tips" v-if="currentMenu && currentMenu.tips">
             {{ currentMenu.tips }}
-          </div>
-          <div class="space-info">
-            <div>空间使用</div>
-            <div class="percent">
-              <el-progress
-                :percentage="
-                  Math.floor(
-                    (useSpaceInfo.useSpace / useSpaceInfo.totalSpace) * 10000
-                  ) / 100
-                "
-                color="#409eff"
-              />
-            </div>
-
-            <div class="space-use">
-              <div class="use">
-                {{ proxy.Utils.size2Str(useSpaceInfo.useSpace) }}/
-                {{ proxy.Utils.size2Str(useSpaceInfo.totalSpace) }}
-              </div>
-              <div class="iconfont icon-refresh" @click="getUseSpace"></div>
-            </div>
           </div>
         </div>
       </div>
@@ -628,7 +623,7 @@ getUseSpace();
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--component-bg);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border-light);
 
   .logo {
@@ -716,6 +711,43 @@ getUseSpace();
       transition: color 0.3s ease;
       &:hover {
         color: #05a1f5;
+      }
+    }
+    
+    .space-info-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 15px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+      
+      .space-text {
+        font-size: 12px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        min-width: 100px;
+      }
+      
+      .space-percent {
+        width: 120px;
+        
+        :deep(.el-progress-bar__outer) {
+          background-color: #e4e7ed;
+        }
+      }
+      
+      .iconfont {
+        cursor: pointer;
+        color: #05a1f5;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          transform: rotate(180deg);
+          color: #409eff;
+        }
       }
     }
     
@@ -840,10 +872,10 @@ getUseSpace();
       }
     }
     .menu-sub-list {
-      width: 200px;
+      width: 150px;
       padding: 20px 10px 0px;
       position: relative;
-      background-color: var(--bg-secondary);
+      background: var(--main-sidebar-bg);
       .menu-item-sub {
         text-align: center;
         line-height: 40px;
@@ -920,37 +952,13 @@ getUseSpace();
         color: var(--text-tertiary);
         font-size: 13px;
       }
-
-      .space-info {
-        position: absolute;
-        bottom: 10px;
-        width: 100%;
-        padding: 0px 5px;
-        .percent {
-          padding-right: 10px;
-        }
-        .space-use {
-          margin-top: 5px;
-          color: var(--text-tertiary);
-          display: flex;
-          justify-content: space-around;
-          .use {
-            flex: 1;
-          }
-          .iconfont {
-            cursor: pointer;
-            margin-right: 20px;
-            color: #05a1f5;
-          }
-        }
-      }
     }
   }
   .body-content {
     flex: 1;
     width: 0;
     padding-left: 20px;
-    background-color: var(--bg-primary);
+    background: var(--main-content-bg);
   }
 }
 

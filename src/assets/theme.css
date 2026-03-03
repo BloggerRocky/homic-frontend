@@ -1,11 +1,38 @@
 /* 全局主题变量和样式 */
 
-/* 钉钉字体定义 */
+/* Swei Gothic 字体定义 */
 @font-face {
-  font-family: 'DingTalk';
-  src: url('@/assets/character/dingding/BiSnS0UaNQsj.woff2') format('woff2'),
-       url('@/assets/character/dingding/BiSnS0UaNQsj.woff') format('woff');
+  font-family: 'SweiGothic';
+  src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Regular.woff2') format('woff2'),
+       url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Regular.woff') format('woff');
   font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SweiGothic';
+  src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Light.woff2') format('woff2'),
+       url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SweiGothic';
+  src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Medium.woff2') format('woff2'),
+       url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SweiGothic';
+  src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Bold.woff2') format('woff2'),
+       url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Bold.woff') format('woff');
+  font-weight: bold;
   font-style: normal;
   font-display: swap;
 }
@@ -44,6 +71,13 @@
   /* 其他 */
   --divider-color: #ebeef5;
   --overlay-bg: rgba(0, 0, 0, 0.5);
+  
+  /* Framework 顶部栏 - 蓝白色背景 */
+  --header-bg: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+  
+  /* 主页 - 黄白色背景 */
+  --main-sidebar-bg: #fffef5;
+  --main-content-bg: #fefef9;
 }
 
 /* 深色模式 */
@@ -86,7 +120,7 @@
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'DingTalk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'SweiGothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
   -webkit-font-smoothing: antialiased;

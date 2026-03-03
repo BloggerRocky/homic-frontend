@@ -1,9 +1,36 @@
-/* 钉钉字体定义 */
+/* Swei Gothic 字体定义 */
 @font-face {
-    font-family: 'DingTalk';
-    src: url('@/assets/character/dingding/BiSnS0UaNQsj.woff2') format('woff2'),
-         url('@/assets/character/dingding/BiSnS0UaNQsj.woff') format('woff');
+    font-family: 'SweiGothic';
+    src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Regular.woff2') format('woff2'),
+         url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Regular.woff') format('woff');
     font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SweiGothic';
+    src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Light.woff2') format('woff2'),
+         url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SweiGothic';
+    src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Medium.woff2') format('woff2'),
+         url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SweiGothic';
+    src: url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Bold.woff2') format('woff2'),
+         url('@/assets/character/swei/CJK SC/SweiGothicCJKsc-Bold.woff') format('woff');
+    font-weight: bold;
     font-style: normal;
     font-display: swap;
 }
@@ -43,7 +70,7 @@ body {
     margin: 0px;
     font-size: 14px;
     color: #636d7e;
-    font-family: 'DingTalk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    font-family: 'SweiGothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
         'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
         sans-serif;
     -webkit-font-smoothing: antialiased;

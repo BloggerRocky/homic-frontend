@@ -58,11 +58,7 @@
         @rowSelected="rowSelected"
       >
         <template #fileName="{ index, row }">
-          <div
-            class="file-item"
-            @mouseenter="showOp(row)"
-            @mouseleave="cancelShowOp(row)"
-          >
+          <div class="file-item">
             <template
               v-if="(row.fileType == 3 || row.fileType == 1) && row.status == 2"
             >
@@ -100,36 +96,53 @@
                 @click="cancelNameEdit(index)"
               ></span>
             </div>
-            <span class="op">
-              <template v-if="row.showOp && row.fileId && row.status == 2">
-                <span class="iconfont icon-share1" @click="share(row)"
-                  >分享</span
-                >
-                <span
-                  class="iconfont icon-download"
-                  @click="download(row)"
-                  v-if="row.folderType == 0"
-                  >下载</span
-                >
-                <span class="iconfont icon-del" @click="delFile(row)"
-                  >删除</span
-                >
-                <span
-                  class="iconfont icon-edit"
-                  @click.stop="editFileName(index)"
-                  >重命名</span
-                >
-                <span class="iconfont icon-move" @click="moveFolder(row)"
-                  >移动</span
-                >
-              </template>
-            </span>
           </div>
         </template>
         <template #fileSize="{ index, row }">
           <span v-if="row.fileSize">
             {{ proxy.Utils.size2Str(row.fileSize) }}</span
           >
+        </template>
+        <template #userAvatar="{ index, row }">
+          <el-tooltip placement="top">
+            <template #content>
+              <div>昵称: {{ row.nickName || '未知' }}</div>
+              <div>ID: {{ row.userId || '未知' }}</div>
+            </template>
+            <div class="user-avatar-cell">
+              <Avatar
+                :userId="row.userId"
+                :avatar="row.avatar"
+                :width="32"
+              ></Avatar>
+            </div>
+          </el-tooltip>
+        </template>
+        <template #operation="{ index, row }">
+          <el-dropdown trigger="click" @command="(command) => handleOperation(command, row, index)">
+            <span class="operation-btn">
+              <el-icon><MoreFilled /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="share" v-if="row.fileId && row.status == 2">
+                  <span class="iconfont icon-share1"></span> 分享
+                </el-dropdown-item>
+                <el-dropdown-item command="download" v-if="row.folderType == 0 && row.status == 2">
+                  <span class="iconfont icon-download"></span> 下载
+                </el-dropdown-item>
+                <el-dropdown-item command="rename" v-if="row.fileId && row.status == 2">
+                  <span class="iconfont icon-edit"></span> 重命名
+                </el-dropdown-item>
+                <el-dropdown-item command="move" v-if="row.fileId && row.status == 2">
+                  <span class="iconfont icon-move"></span> 移动
+                </el-dropdown-item>
+                <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2" divided>
+                  <span class="iconfont icon-del"></span> 删除
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </template>
       </Table>
     </div>
@@ -204,6 +217,10 @@
       
       <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
       
+      <div class="context-menu-item" @click="contextMenuRename" v-if="shouldShowRename()">
+        <span class="iconfont icon-edit"></span>
+        <span>重命名</span>
+      </div>
       <div class="context-menu-item" @click="contextMenuDelete" v-if="contextMenuFile || selectFileIdList.length > 0">
         <span class="iconfont icon-del"></span>
         <span>{{ selectFileIdList.length > 0 ? `删除 (${selectFileIdList.length}项)` : '删除' }}</span>
@@ -238,6 +255,7 @@ import FileShare from "./ShareFile.vue";
 import FriendSelectDialog from "../friend/FriendSelectDialog.vue";
 import { ref, reactive, getCurrentInstance, nextTick, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { MoreFilled } from '@element-plus/icons-vue';
 
 // 导入排序图标
 import sortAscIcon from '@/assets/icon-image/main/sort/asc.png';
@@ -287,6 +305,11 @@ const columns = [
     scopedSlots: "fileName",
   },
   {
+    label: "创建时间",
+    prop: "createTime",
+    width: 200,
+  },
+  {
     label: "修改时间",
     prop: "lastUpdateTime",
     width: 200,
@@ -296,6 +319,18 @@ const columns = [
     prop: "fileSize",
     scopedSlots: "fileSize",
     width: 200,
+  },
+  {
+    label: "所属用户",
+    prop: "userId",
+    scopedSlots: "userAvatar",
+    width: 100,
+  },
+  {
+    label: "操作",
+    prop: "operation",
+    scopedSlots: "operation",
+    width: 80,
   },
 ];
 //搜索
@@ -406,6 +441,7 @@ const loadDataList = async () => {
     fileNameFuzzy: fileNameFuzzy.value,
     category: category.value,
     filePid: currentFolder.value.fileId,
+    queryNickName: true,  // 查询用户昵称
   };
   if (params.category !== "all") {
     delete params.filePid;
@@ -427,17 +463,6 @@ const loadDataList = async () => {
   });
 };
 
-//展示操作按钮
-const showOp = (row) => {
-  tableData.value.list.forEach((element) => {
-    element.showOp = false;
-  });
-  row.showOp = true;
-};
-
-const cancelShowOp = (row) => {
-  row.showOp = false;
-};
 
 //编辑行
 const editing = ref(false);
@@ -526,6 +551,27 @@ const editFileName = (index) => {
   nextTick(() => {
     editNameRef.value.focus();
   });
+};
+
+// 操作按钮处理
+const handleOperation = (command, row, index) => {
+  switch (command) {
+    case 'share':
+      share(row);
+      break;
+    case 'download':
+      download(row);
+      break;
+    case 'rename':
+      editFileName(index);
+      break;
+    case 'move':
+      moveFolder(row);
+      break;
+    case 'delete':
+      delFile(row);
+      break;
+  }
 };
 
 //多选 批量选择
@@ -757,6 +803,40 @@ const contextMenuDelete = () => {
   } else if (contextMenuFile.value) {
     delFile(contextMenuFile.value);
   }
+};
+
+// 右键菜单 - 重命名
+const contextMenuRename = () => {
+  contextMenuVisible.value = false;
+  
+  if (contextMenuFile.value) {
+    // 找到文件在列表中的索引
+    const index = tableData.value.list.findIndex(
+      item => item.fileId === contextMenuFile.value.fileId
+    );
+    if (index !== -1) {
+      editFileName(index);
+    }
+  } else if (selectFileIdList.value.length === 1) {
+    // 如果只选中了一个文件
+    const index = tableData.value.list.findIndex(
+      item => item.fileId === selectFileIdList.value[0]
+    );
+    if (index !== -1) {
+      editFileName(index);
+    }
+  }
+};
+
+// 判断是否显示重命名选项（只在右键单个文件或选中单个文件时显示）
+const shouldShowRename = () => {
+  if (contextMenuFile.value && selectFileIdList.value.length === 0) {
+    return true;
+  }
+  if (selectFileIdList.value.length === 1) {
+    return true;
+  }
+  return false;
 };
 
 // 右键菜单 - 移动
