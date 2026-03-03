@@ -162,7 +162,7 @@
                       {{ member.nickName }}
                     </template>
                   </span>
-                  <span class="member-role-tag">{{ getRoleText(member.role) }}</span>
+                  <span class="member-role-tag" :class="getRoleClass(member.role)">{{ getRoleText(member.role) }}</span>
                 </div>
                 <div class="member-meta">
                   <span>用户ID: {{ member.userId }}</span>
@@ -745,6 +745,16 @@ const getRoleText = (role) => {
     2: '成员',
   }
   return roleMap[role] || '成员'
+}
+
+// 获取角色样式类
+const getRoleClass = (role) => {
+  const roleClassMap = {
+    0: 'role-creator',
+    1: 'role-admin',
+    2: 'role-member',
+  }
+  return roleClassMap[role] || 'role-member'
 }
 
 // 加载申请列表
@@ -1393,10 +1403,21 @@ onMounted(() => {
 
               .member-role-tag {
                 padding: 2px 8px;
-                background: #409eff;
                 color: white;
                 font-size: 12px;
                 border-radius: 4px;
+
+                &.role-creator {
+                  background-color: #f59e0b; // 橙色
+                }
+
+                &.role-admin {
+                  background-color: #10b981; // 绿色
+                }
+
+                &.role-member {
+                  background-color: #6b7280; // 灰色
+                }
               }
             }
 
