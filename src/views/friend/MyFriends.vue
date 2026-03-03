@@ -25,6 +25,7 @@
                     <span v-if="friend.remark" class="original-name">({{ friend.nickName }})</span>
                   </div>
                   <div class="friend-id">ID: {{ friend.friendId }}</div>
+                  <div class="friend-time">结交时间: {{ friend.createTime }}</div>
                 </div>
               </div>
               <div class="friend-actions">
@@ -74,6 +75,7 @@
                     <span v-if="friend.remark" class="original-name">({{ friend.nickName }})</span>
                   </div>
                   <div class="friend-id">ID: {{ friend.friendId }}</div>
+                  <div class="friend-time">结交时间: {{ friend.createTime }}</div>
                 </div>
               </div>
               <div class="friend-actions">
@@ -463,6 +465,11 @@ onMounted(() => {
 
             .friend-id {
               font-size: 13px;
+              color: var(--text-tertiary);
+            }
+
+            .friend-time {
+              font-size: 12px;
               color: var(--text-tertiary);
             }
           }

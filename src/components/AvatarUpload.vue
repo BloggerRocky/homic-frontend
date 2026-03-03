@@ -5,11 +5,11 @@
         <img :src="localFile" />
       </template>
       <template v-else>
+        <img :src="avatarUrl" v-if="avatarUrl" />
         <img
           :src="`${modelValue.qqAvatar}`"
-          v-if="modelValue && modelValue.qqAvatar"
+          v-else-if="modelValue && modelValue.qqAvatar"
         />
-        <img :src="`/api/getAvatar/${modelValue.userId}`" v-else />
       </template>
     </div>
     <div class="select-btn">
@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, getCurrentInstance } from "vue";
+import { ref, reactive, getCurrentInstance, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 const { proxy } = getCurrentInstance();
 const router = useRouter();
@@ -39,6 +39,10 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: null,
+  },
+  avatarUrl: {
+    type: String,
+    default: '',
   },
 });
 

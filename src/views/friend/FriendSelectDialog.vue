@@ -98,15 +98,15 @@ const getAvatarUrl = (userId) => {
 }
 
 // 打开对话框
-const show = async () => {
+const show = async (excludeUserIds = []) => {
   dialogVisible.value = true
   selectedFriends.value = []
   searchKeyword.value = ''
-  await loadFriendList()
+  await loadFriendList(excludeUserIds)
 }
 
 // 加载好友列表
-const loadFriendList = async () => {
+const loadFriendList = async (excludeUserIds = []) => {
   try {
     const result = await proxy.Request({
       url: api.loadFriendList,
@@ -114,8 +114,14 @@ const loadFriendList = async () => {
     })
     
     if (result && Array.isArray(result.data)) {
+      // 过滤掉排除的用户
+      let filteredData = result.data
+      if (excludeUserIds.length > 0) {
+        filteredData = result.data.filter(friend => !excludeUserIds.includes(friend.friendId))
+      }
+      
       // 按照特别关注排序：关注的好友在前
-      const sortedList = result.data.sort((a, b) => {
+      const sortedList = filteredData.sort((a, b) => {
         // isSpecial: 1 表示特别关注，0 表示普通好友
         if (a.isSpecial === b.isSpecial) {
           // 如果关注状态相同，按昵称或备注排序
@@ -198,8 +204,15 @@ const handleClose = () => {
   filteredFriendList.value = []
 }
 
+// 手动关闭对话框（供父组件调用）
+const close = () => {
+  dialogVisible.value = false
+  handleClose()
+}
+
 defineExpose({
-  show
+  show,
+  close
 })
 </script>
 

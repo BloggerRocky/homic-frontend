@@ -197,18 +197,35 @@ watch(
   font-size: 13px;
   display: flex;
   align-items: center;
-  line-height: 40px;
+  line-height: 30px;
+  padding: 0;
+  margin: 0;
+  
   .all-file {
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--text-primary);
   }
   .link {
     color: #06a7ff;
     cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      color: #409eff;
+      text-decoration: underline;
+    }
+  }
+  .back {
+    margin-right: 5px;
   }
   .icon-right {
-    color: #06a7ff;
+    color: var(--text-tertiary);
     padding: 0px 5px;
     font-size: 13px;
+  }
+  .text {
+    color: var(--text-primary);
+    font-weight: 500;
   }
 }
 </style>

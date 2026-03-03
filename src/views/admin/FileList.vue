@@ -104,6 +104,21 @@
             {{ proxy.Utils.size2Str(row.fileSize) }}</span
           >
         </template>
+        <template #userAvatar="{ index, row }">
+          <el-tooltip placement="top">
+            <template #content>
+              <div>昵称: {{ row.nickName || '未知' }}</div>
+              <div>ID: {{ row.userId || '未知' }}</div>
+            </template>
+            <div class="user-avatar-cell">
+              <Avatar
+                :userId="row.userId"
+                :avatar="row.avatar"
+                :width="32"
+              ></Avatar>
+            </div>
+          </el-tooltip>
+        </template>
       </Table>
     </div>
     <!--预览-->
@@ -130,9 +145,10 @@ const columns = [
     scopedSlots: "fileName",
   },
   {
-    label: "发布人",
-    prop: "nickName",
-    width: 250,
+    label: "所属用户",
+    prop: "userId",
+    scopedSlots: "userAvatar",
+    width: 100,
   },
   {
     label: "修改时间",
@@ -287,6 +303,12 @@ const download = async (row) => {
     .op {
       width: 120px;
     }
+  }
+  .user-avatar-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
 }
 </style>

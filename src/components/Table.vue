@@ -167,8 +167,11 @@ const handlePageNoChange = (pageNo) => {
 </script>
 <style lang="scss" scoped>
 .pagination {
-  padding-top: 10px;
-  padding-right: 10px;
+  padding: 15px 10px;
+  background: var(--component-bg);
+  border-radius: 8px;
+  margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 .el-pagination {
   justify-content: right;
@@ -176,5 +179,41 @@ const handlePageNoChange = (pageNo) => {
 
 :deep .el-table__cell {
   padding: 4px 0px;
+}
+
+:deep .el-table {
+  background-color: var(--component-bg);
+  color: var(--text-primary);
+}
+
+:deep .el-table th.el-table__cell {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+:deep .el-table tr {
+  background-color: var(--component-bg);
+}
+
+:deep .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: var(--bg-secondary);
+}
+
+:deep .el-table__body tr:hover > td {
+  background-color: var(--component-hover-bg) !important;
+}
+
+:deep .el-table td.el-table__cell {
+  border-bottom-color: var(--border-light);
+}
+
+:deep .el-table--border .el-table__cell {
+  border-right-color: var(--border-light);
+}
+
+:deep .el-table--border::after,
+:deep .el-table--group::after,
+:deep .el-table::before {
+  background-color: var(--border-light);
 }
 </style>

@@ -114,6 +114,13 @@
   /* 其他 */
   --divider-color: #3f3f46;
   --overlay-bg: rgba(0, 0, 0, 0.8);
+  
+  /* Framework 顶部栏 - 深色 */
+  --header-bg: #1f1f1f;
+  
+  /* 主页 - 深色 */
+  --main-sidebar-bg: #1f1f1f;
+  --main-content-bg: #1a1a1a;
 }
 
 /* 全局样式应用 */

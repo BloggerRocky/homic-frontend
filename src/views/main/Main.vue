@@ -298,7 +298,7 @@ const fileAccept = computed(() => {
 });
 
 //列表
-const columns = [
+const columns = ref([
   {
     label: "文件名",
     prop: "fileName",
@@ -321,18 +321,12 @@ const columns = [
     width: 200,
   },
   {
-    label: "所属用户",
-    prop: "userId",
-    scopedSlots: "userAvatar",
-    width: 100,
-  },
-  {
     label: "操作",
     prop: "operation",
     scopedSlots: "operation",
     width: 80,
   },
-];
+]);
 //搜索
 const search = () => {
   showLoading.value = true;
@@ -998,10 +992,10 @@ const downloadWithDelay = (file, delay) => {
 
 .context-menu {
   position: fixed;
-  background: white;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  background: var(--component-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 9999;
   min-width: 160px;
   padding: 5px 0;
@@ -1013,22 +1007,27 @@ const downloadWithDelay = (file, delay) => {
     align-items: center;
     gap: 10px;
     font-size: 14px;
-    color: #606266;
+    color: var(--text-primary);
     transition: all 0.3s;
     
     .iconfont {
       font-size: 16px;
+      color: var(--text-secondary);
     }
     
     &:hover {
-      background-color: #f5f7fa;
+      background-color: var(--component-hover-bg);
       color: #409eff;
+      
+      .iconfont {
+        color: #409eff;
+      }
     }
   }
   
   .context-menu-divider {
     height: 1px;
-    background-color: #e4e7ed;
+    background-color: var(--border-light);
     margin: 5px 0;
   }
 }

@@ -29,6 +29,7 @@
           </el-col>
           <el-col :span="4" :style="{ 'padding-left': '10px' }">
             <el-button type="primary" @click="loadDataList"> 查询 </el-button>
+            <el-button type="success" @click="showCreateUserDialog"> 新建用户 </el-button>
           </el-col>
         </el-row>
       </el-form>
@@ -96,12 +97,69 @@
         </el-form-item>
       </el-form>
     </Dialog>
+
+    <!-- 新建用户对话框 -->
+    <Dialog
+      :show="createUserDialogConfig.show"
+      :title="createUserDialogConfig.title"
+      :buttons="createUserDialogConfig.buttons"
+      width="500px"
+      :showCancel="true"
+      @close="createUserDialogConfig.show = false"
+    >
+      <el-form
+        :model="createUserFormData"
+        :rules="createUserRules"
+        ref="createUserFormRef"
+        label-width="80px"
+        @submit.prevent
+      >
+        <!-- 头像上传 -->
+        <el-form-item label="用户头像">
+          <AvatarUpload
+            v-model="createUserFormData.avatarFile"
+          />
+        </el-form-item>
+        
+        <!-- 邮箱输入 -->
+        <el-form-item label="邮箱" prop="email">
+          <el-input
+            clearable
+            placeholder="请输入邮箱"
+            v-model="createUserFormData.email"
+          ></el-input>
+        </el-form-item>
+        
+        <!-- 昵称输入 -->
+        <el-form-item label="昵称" prop="nickName">
+          <el-input
+            clearable
+            placeholder="请输入昵称（可选，默认使用邮箱前缀）"
+            v-model="createUserFormData.nickName"
+            maxlength="20"
+          ></el-input>
+        </el-form-item>
+        
+        <!-- 密码输入 -->
+        <el-form-item label="密码" prop="password">
+          <el-input
+            clearable
+            type="password"
+            placeholder="请输入密码（至少6位）"
+            v-model="createUserFormData.password"
+            show-password
+          ></el-input>
+        </el-form-item>
+      </el-form>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, getCurrentInstance, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import AvatarUpload from "@/components/AvatarUpload.vue";
+
 const { proxy } = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
@@ -110,6 +168,7 @@ const api = {
   loadDataList: "/admin/loadUserList",
   updateUserStatus: "/admin/updateUserStatus",
   updateUserSpace: "/admin/updateUserSpace",
+  createUser: "/admin/createUser",
 };
 
 //列表
@@ -245,6 +304,91 @@ const submitForm = () => {
     loadDataList();
   });
 };
+
+// 新建用户相关
+const createUserDialogConfig = ref({
+  show: false,
+  title: "新建用户",
+  buttons: [
+    {
+      type: "primary",
+      text: "创建",
+      click: (e) => {
+        submitCreateUser();
+      },
+    },
+  ],
+});
+
+const createUserFormData = ref({
+  email: "",
+  nickName: "",
+  password: "",
+  avatarFile: null,
+});
+
+const createUserFormRef = ref();
+
+const createUserRules = {
+  email: [
+    { required: true, message: "请输入邮箱" },
+    { type: "email", message: "请输入正确的邮箱格式" },
+  ],
+  nickName: [
+    { max: 20, message: "昵称长度不能超过20个字符" },
+  ],
+  password: [
+    { required: true, message: "请输入密码" },
+    { min: 6, message: "密码长度至少为6位" },
+  ],
+};
+
+const showCreateUserDialog = () => {
+  createUserDialogConfig.value.show = true;
+  nextTick(() => {
+    createUserFormRef.value.resetFields();
+    createUserFormData.value = {
+      email: "",
+      nickName: "",
+      password: "",
+      avatarFile: null,
+    };
+  });
+};
+
+const submitCreateUser = () => {
+  createUserFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      return;
+    }
+
+    // 构建参数对象
+    let params = {
+      email: createUserFormData.value.email,
+      nickName: createUserFormData.value.nickName || "",
+      password: createUserFormData.value.password,
+    };
+    
+    // 如果有头像文件，添加到参数中
+    if (createUserFormData.value.avatarFile) {
+      params.avatar = createUserFormData.value.avatarFile;
+    }
+
+    let result = await proxy.Request({
+      url: api.createUser,
+      params: params,
+    });
+
+    if (!result) {
+      return;
+    }
+
+    createUserDialogConfig.value.show = false;
+    proxy.Message.success("用户创建成功");
+    loadDataList();
+  });
+};
+
 </script>
 <style lang="scss" scoped>
 .top-panel {

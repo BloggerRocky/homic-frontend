@@ -4,6 +4,10 @@
     .top-op {
         display: flex;
         align-items: center;
+        background: var(--component-bg);
+        padding: 15px;
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
         .btn {
             margin-right: 10px;
@@ -17,6 +21,13 @@
         .icon-refresh {
             cursor: pointer;
             margin-left: 10px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            
+            &:hover {
+                color: #409eff;
+                transform: rotate(180deg);
+            }
         }
         
         .sort-btn-wrapper {
@@ -30,7 +41,7 @@
             transition: all 0.3s ease;
             
             &:hover {
-                background-color: #f5f7fa;
+                background-color: var(--component-hover-bg);
             }
             
             .sort-icon {
@@ -49,9 +60,24 @@
             cursor: not-allowed;
         }
     }
+    
+    // 导航面包屑融入功能块
+    :deep(.top-navigation) {
+        background: var(--component-bg);
+        padding: 12px 15px;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border-top: 1px solid var(--border-light);
+    }
 }
 
 .file-list {
+    background: var(--component-bg);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    
     .file-item {
         display: flex;
         align-items: center;
@@ -67,6 +93,7 @@
 
             span {
                 cursor: pointer;
+                color: var(--text-primary);
 
                 &:hover {
                     color: #06a7ff;
@@ -125,10 +152,10 @@
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    color: #606266;
+    color: var(--text-secondary);
     
     &:hover {
-        background-color: #f5f7fa;
+        background-color: var(--component-hover-bg);
         color: #409eff;
     }
 }
@@ -145,12 +172,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--component-bg);
+    border-radius: 8px;
+    margin-top: 15px;
 
     .no-data-inner {
         text-align: center;
 
         .tips {
             margin-top: 10px;
+            color: var(--text-secondary);
         }
 
         .op-list {
@@ -165,7 +196,15 @@
                 height: 100px;
                 margin: 0px 10px;
                 padding: 5px 0px;
-                background: rgb(241, 241, 241);
+                background: var(--component-hover-bg);
+                border-radius: 8px;
+                transition: all 0.3s ease;
+                
+                &:hover {
+                    background: var(--component-active-bg);
+                    transform: translateY(-5px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
             }
         }
     }
