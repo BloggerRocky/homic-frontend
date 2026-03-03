@@ -97,14 +97,19 @@
                 </div>
                 <div class="member-role">{{ getRoleText(member.role) }}</div>
               </div>
-              <div v-if="!member.isFriend && member.userId !== currentUserId" class="add-friend-btn" @click="showAddFriendConfirm(member)">
+              <!-- 关怀账号显示禁止图标 -->
+              <div v-if="member.isDummy" class="forbidden-icon" title="关怀账号不支持添加好友">
+                <span class="icon">🚫</span>
+              </div>
+              <!-- 普通用户显示添加好友按钮 -->
+              <div v-else-if="!member.isFriend && member.userId !== currentUserId && !userInfo.isDummy" class="add-friend-btn" @click="showAddFriendConfirm(member)">
                 <span class="add-icon">+</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="family-actions">
+        <div class="family-actions" v-if="!userInfo.isDummy">
           <button class="custom-btn btn-generate" @click="generateFamilyCode">生成家庭码</button>
           <button class="custom-btn btn-invite" @click="showInviteFriendDialog = true">邀请好友</button>
           <button class="custom-btn btn-leave" @click="leaveFamily">离开家庭</button>
@@ -162,7 +167,10 @@
                       {{ member.nickName }}
                     </template>
                   </span>
-                  <span class="member-role-tag" :class="getRoleClass(member.role)">{{ getRoleText(member.role) }}</span>
+                  <span class="member-role-tag" :class="getRoleClass(member.role)">
+                    {{ getRoleText(member.role) }}
+                  </span>
+                  <span v-if="member.isDummy" class="care-badge">关怀账号</span>
                 </div>
                 <div class="member-meta">
                   <span>用户ID: {{ member.userId }}</span>
@@ -455,6 +463,7 @@ const api = {
 
 // 当前用户ID
 const currentUserId = ref('')
+const userInfo = ref(proxy.VueCookies.get('userInfo'))
 
 // 状态
 const hasFamily = ref(false)
@@ -505,6 +514,18 @@ const permissionForm = reactive({
 
 const memberRemarkForm = reactive({
   remark: '',
+})
+
+// 关怀账号相关
+const careAccounts = ref([])
+const showCreateCareAccountDialog = ref(false)
+const showLoginCodeDialog = ref(false)
+const currentLoginCode = ref('')
+const avatarUploadRef = ref()
+
+const careAccountForm = reactive({
+  nickName: '',
+  avatar: null,
 })
 
 // 检查是否已加入家庭
@@ -966,6 +987,144 @@ const showAddFriendConfirm = (member) => {
   })
 }
 
+// 加载关怀账号列表
+const loadCareAccounts = async () => {
+  const result = await proxy.Request({
+    url: api.getCareAccountList,
+    showLoading: false,
+  })
+  if (result) {
+    careAccounts.value = result.data || []
+  }
+}
+
+// 处理关怀账号头像上传
+const handleCareAccountAvatarChange = (file) => {
+  careAccountForm.avatar = file
+}
+
+// 创建关怀账号
+const createCareAccount = async () => {
+  if (!careAccountForm.nickName) {
+    proxy.Message.warning('请输入昵称')
+    return
+  }
+  
+  const formData = new FormData()
+  formData.append('nickName', careAccountForm.nickName)
+  if (careAccountForm.avatar) {
+    formData.append('avatar', careAccountForm.avatar)
+  }
+  
+  const result = await proxy.Request({
+    url: api.createCareAccount,
+    params: formData,
+    dataType: 'file',
+  })
+  
+  if (result) {
+    proxy.Message.success('关怀账号创建成功')
+    showCreateCareAccountDialog.value = false
+    careAccountForm.nickName = ''
+    careAccountForm.avatar = null
+    if (avatarUploadRef.value) {
+      avatarUploadRef.value.reset()
+    }
+    loadCareAccounts()
+    loadFamilyMembers()
+  }
+}
+
+// 生成登录码
+const generateLoginCodeForAccount = async (account) => {
+  const result = await proxy.Request({
+    url: api.generateLoginCode,
+    params: { careAccountId: account.userId },
+  })
+  
+  if (result) {
+    currentLoginCode.value = result.data
+    showLoginCodeDialog.value = true
+    loadCareAccounts()
+  }
+}
+
+// 复制登录码
+const copyLoginCode = async () => {
+  try {
+    await navigator.clipboard.writeText(currentLoginCode.value)
+    proxy.Message.success('登录码已复制到剪贴板')
+  } catch (err) {
+    const textarea = document.createElement('textarea')
+    textarea.value = currentLoginCode.value
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      proxy.Message.success('登录码已复制到剪贴板')
+    } catch (e) {
+      proxy.Message.error('复制失败，请手动复制')
+    }
+    document.body.removeChild(textarea)
+  }
+}
+
+// 确认删除关怀账号
+const confirmDeleteCareAccount = (account) => {
+  proxy.Confirm(`确定要删除关怀账号【${account.nickName}】吗？删除后将无法恢复。`, async () => {
+    const result = await proxy.Request({
+      url: api.deleteCareAccount,
+      params: { careAccountId: account.userId },
+    })
+    
+    if (result) {
+      proxy.Message.success('关怀账号已删除')
+      loadCareAccounts()
+      loadFamilyMembers()
+    }
+  })
+}
+
+// 格式化文件大小
+const formatSize = (size) => {
+  if (!size) return '0B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let index = 0
+  let fileSize = size
+  while (fileSize >= 1024 && index < units.length - 1) {
+    fileSize /= 1024
+    index++
+  }
+  return fileSize.toFixed(2) + units[index]
+}
+
+// 格式化过期时间
+const formatExpireTime = (expireTime) => {
+  if (!expireTime) return ''
+  const now = new Date()
+  const expire = new Date(expireTime)
+  const diff = expire - now
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  
+  if (days > 0) {
+    return `${days}天后过期`
+  } else if (hours > 0) {
+    return `${hours}小时后过期`
+  } else {
+    return '即将过期'
+  }
+}
+
+// 监听标签切换
+const handleTabChange = () => {
+  if (activeTab.value === 'care' && isCreator.value) {
+    loadCareAccounts()
+  }
+}
+
 onMounted(() => {
   currentUserId.value = proxy.VueCookies.get('userInfo').userId
   checkFamily()
@@ -1287,6 +1446,20 @@ onMounted(() => {
               line-height: 1;
             }
           }
+
+          .forbidden-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            cursor: not-allowed;
+            opacity: 0.6;
+
+            .icon {
+              font-size: 24px;
+            }
+          }
         }
       }
     }
@@ -1419,6 +1592,17 @@ onMounted(() => {
                   background-color: #6b7280; // 灰色
                 }
               }
+
+              .care-badge {
+                margin-left: 5px;
+                padding: 2px 8px;
+                background: #fef3c7; // 淡黄色背景
+                color: #92400e; // 深棕色文字
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 500;
+                border: 1px solid #fde68a; // 淡黄色边框
+              }
             }
 
             .member-meta {
@@ -1447,6 +1631,77 @@ onMounted(() => {
               transform: scale(1.1);
             }
           }
+        }
+      }
+    }
+  }
+
+  .care-account-page {
+    .care-account-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 20px;
+      background: var(--component-bg);
+      border-radius: 8px;
+
+      .tip {
+        color: var(--text-tertiary);
+        font-size: 13px;
+      }
+    }
+
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .care-account-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+
+      .care-account-item {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+        background: var(--component-bg);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .account-info {
+          flex: 1;
+
+          .account-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+          }
+
+          .account-space,
+          .account-time,
+          .account-code {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+          }
+
+          .account-code {
+            color: #409eff;
+            font-weight: 500;
+          }
+        }
+
+        .account-actions {
+          display: flex;
+          gap: 10px;
         }
       }
     }

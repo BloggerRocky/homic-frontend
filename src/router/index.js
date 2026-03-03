@@ -100,12 +100,21 @@ const router = createRouter({
         },
         {
           path: '/family',
-          name: '家庭',
+          name: '家庭管理',
           meta: {
             needLogin: true,
             menuCode: "family"
           },
           component: () => import("@/views/Family.vue")
+        },
+        {
+          path: '/family/careAccount',
+          name: '关怀账号',
+          meta: {
+            needLogin: true,
+            menuCode: "family"
+          },
+          component: () => import("@/views/family/CareAccount.vue")
         },
       ]
     },

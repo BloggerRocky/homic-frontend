@@ -383,7 +383,9 @@ const uploadCallbackHandler = () => {
 const timestamp = ref(0);
 //获取用户信息
 const userInfo = ref(proxy.VueCookies.get("userInfo"));
-const menus = [
+
+// 完整菜单列表
+const fullMenus = [
   {
     icon: "file",
     name: "首页",
@@ -461,6 +463,11 @@ const menus = [
         name: "家庭管理",
         path: "/family",
       },
+      {
+        name: "关怀账号",
+        path: "/family/careAccount",
+        creatorOnly: true,  // 只有创建者可见
+      },
     ],
   },
   {
@@ -513,6 +520,20 @@ const menus = [
   },
 ];
 
+// 根据用户类型过滤菜单
+const menus = computed(() => {
+  // 如果是关怀账号，只显示首页、家庭、回收站
+  if (userInfo.value && userInfo.value.isDummy) {
+    return fullMenus.filter(menu => 
+      menu.menuCode === 'main' || 
+      menu.menuCode === 'family' || 
+      menu.menuCode === 'recycle'
+    );
+  }
+  // 正常用户显示完整菜单
+  return fullMenus;
+});
+
 const currentMenu = ref({});
 const currentPath = ref();
 
@@ -544,7 +565,7 @@ const handleSubMenuClick = (event, data) => {
 };
 
 const setMenu = (menuCode, path) => {
-  const menu = menus.find((item) => {
+  const menu = menus.value.find((item) => {
     return item.menuCode === menuCode;
   });
   currentMenu.value = menu;

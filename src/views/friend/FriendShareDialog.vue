@@ -32,7 +32,17 @@
               <!-- 文件信息卡片 -->
               <div class="file-card">
                 <div class="file-icon">
-                  <Icon :fileType="share.fileType" :cover="share.fileCover" :width="48" />
+                  <!-- 如果有封面且是图片或视频，显示封面；否则根据文件类型显示图标 -->
+                  <Icon 
+                    v-if="share.fileCover && (share.fileType === 3 || share.fileType === 1)"
+                    :cover="share.fileCover" 
+                    :width="48" 
+                  />
+                  <Icon 
+                    v-else
+                    :fileType="share.folderType === 1 ? 0 : share.fileType" 
+                    :width="48" 
+                  />
                 </div>
                 <div class="file-info">
                   <div class="file-name" :title="share.fileName">{{ share.fileName }}</div>

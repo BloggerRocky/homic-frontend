@@ -9,8 +9,27 @@
         ref="formDataRef"
       >
         <div class="login-title">Homic存储服务</div>
+        
+        <!-- 关怀账号登录码登录 -->
+        <div v-if="opType == 3">
+          <el-form-item prop="loginCode">
+            <el-input
+              size="large"
+              clearable
+              placeholder="请输入8位登录码"
+              v-model.trim="formData.loginCode"
+              maxLength="8"
+              @keyup.enter="doSubmit"
+            >
+              <template #prefix>
+                <span class="iconfont icon-checkcode"></span>
+              </template>
+            </el-input>
+          </el-form-item>
+        </div>
+        
         <!--input输入-->
-        <el-form-item prop="email">
+        <el-form-item prop="email" v-if="opType != 3">
           <el-input
             size="large"
             clearable
@@ -113,7 +132,7 @@
             </el-input>
           </el-form-item>
         </div>
-        <el-form-item prop="checkCode">
+        <el-form-item prop="checkCode" v-if="opType != 3">
           <div class="check-code-panel">
             <el-input
               size="large"
@@ -155,6 +174,11 @@
             >去登录?</a
           >
         </el-form-item>
+        <el-form-item v-if="opType == 3">
+          <a href="javascript:void(0)" class="a-link" @click="showPanel(1)"
+            >返回登录</a
+          >
+        </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
@@ -165,10 +189,25 @@
             <span v-if="opType == 0">注册</span>
             <span v-if="opType == 1">登录</span>
             <span v-if="opType == 2">重置密码</span>
+            <span v-if="opType == 3">登录</span>
           </el-button>
         </el-form-item>
-        <div class="login-btn-qq" v-if="opType == 1">
-          快捷登录 <img src="@/assets/qq.png" @click="qqLogin" />
+        <div class="quick-login-panel" v-if="opType == 1">
+          <span class="quick-login-text">快捷登录</span>
+          <div class="login-icons">
+            <img 
+              src="@/assets/icon-image/login/care_login.png" 
+              class="login-icon"
+              title="关怀账号登录"
+              @click="showPanel(3)" 
+            />
+            <img 
+              src="@/assets/icon-image/login/phone_login.png" 
+              class="login-icon"
+              title="手机登录"
+              @click="showPhoneLoginTip" 
+            />
+          </div>
         </div>
       </el-form>
     </div>
@@ -229,9 +268,10 @@ const api = {
   login: "/login",
   resetPwd: "/resetPwd",
   qqlogin: "/qqlogin",
+  loginByCode: "/careAccount/loginByCode",
 };
 
-// 0:注册 1:登录 2:重置密码
+// 0:注册 1:登录 2:重置密码 3:登录码登录
 const opType = ref(1);
 const showPanel = (type) => {
   opType.value = type;
@@ -239,7 +279,19 @@ const showPanel = (type) => {
 };
 
 onMounted(() => {
-  showPanel(1);
+  // 检查URL中是否有登录码参数
+  const urlLoginCode = route.query.code;
+  if (urlLoginCode) {
+    // 自动填充登录码并切换到登录码登录页面
+    opType.value = 3;
+    nextTick(() => {
+      formData.value.loginCode = urlLoginCode;
+      // 自动提交登录
+      doSubmit();
+    });
+  } else {
+    showPanel(1);
+  }
 });
 
 const checkRePassword = (rule, value, callback) => {
@@ -274,6 +326,10 @@ const rules = {
     },
   ],
   checkCode: [{ required: true, message: "请输入图片验证码" }],
+  loginCode: [
+    { required: true, message: "请输入登录码" },
+    { min: 8, max: 8, message: "登录码为8位字符" },
+  ],
 };
 //验证码
 const checkCodeUrl = ref();
@@ -361,7 +417,7 @@ const resetForm = () => {
   });
 };
 
-// 登录、注册、重置密码  提交表单
+// 登录、注册、重置密码、登录码登录  提交表单
 const doSubmit = () => {
   formDataRef.value.validate(async (valid) => {
     if (!valid) {
@@ -369,6 +425,23 @@ const doSubmit = () => {
     }
     let params = {};
     Object.assign(params, formData.value);
+    
+    // 登录码登录
+    if (opType.value == 3) {
+      let result = await proxy.Request({
+        url: api.loginByCode,
+        params: { loginCode: params.loginCode },
+      });
+      if (!result) {
+        return;
+      }
+      proxy.Message.success("登录成功");
+      proxy.VueCookies.set("userInfo", result.data, 0);
+      const redirectUrl = route.query.redirectUrl || "/";
+      router.push(redirectUrl);
+      return;
+    }
+    
     //注册
     if (opType.value == 0 || opType.value == 2) {
       params.password = params.registerPassword;
@@ -446,6 +519,11 @@ const qqLogin = async () => {
   proxy.VueCookies.remove("userInfo");
   document.location.href = result.data;
 };
+
+// 手机登录提示
+const showPhoneLoginTip = () => {
+  proxy.Message.warning("手机登录当前阶段暂不支持");
+};
 </script>
 
 <style lang="scss" scoped>
@@ -494,6 +572,11 @@ const qqLogin = async () => {
         display: flex;
         justify-content: space-between;
       }
+      .care-account-login {
+        width: 100%;
+        text-align: center;
+        margin-top: 10px;
+      }
       .op-btn {
         width: 100%;
       }
@@ -508,16 +591,43 @@ const qqLogin = async () => {
       cursor: pointer;
     }
   }
-  .login-btn-qq {
+  .quick-login-panel {
     margin-top: 20px;
     text-align: center;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    img {
-      cursor: pointer;
-      margin-left: 10px;
-      width: 20px;
+    gap: 12px;
+
+    .quick-login-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .login-icons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+
+      .login-icon {
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        padding: 4px;
+        background: #f5f7fa;
+
+        &:hover {
+          transform: scale(1.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
     }
   }
 }
