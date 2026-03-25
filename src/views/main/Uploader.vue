@@ -125,6 +125,7 @@ const { proxy } = getCurrentInstance();
 
 const api = {
   upload: "/file/uploadFile",
+  familyUpload: "/familySpace/uploadFile",
 };
 
 const STATUS = {
@@ -170,7 +171,7 @@ const chunkSize = 1024 * 512;
 const fileList = ref([]);
 const delList = ref([]);
 
-const addFile = async (file, filePid) => {
+const addFile = async (file, filePid, familyId) => {
   // 如果文件没有 uid，生成一个唯一的 uid
   if (!file.uid) {
     file.uid = Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -200,6 +201,8 @@ const addFile = async (file, filePid) => {
     chunkIndex: 0,
     //父级ID
     filePid: filePid,
+    //所属家庭ID
+    familyId: familyId || null,
     //错误信息
     errorMsg: null,
   };
@@ -258,7 +261,7 @@ const uploadFile = async (uid, chunkIndex) => {
     let end = start + chunkSize >= fileSize ? fileSize : start + chunkSize;
     let chunkFile = file.slice(start, end);
     let uploadResult = await proxy.Request({
-      url: api.upload,
+      url: currentFile.familyId ? api.familyUpload : api.upload,
       showLoading: false,
       dataType: "file",
       params: {
@@ -269,6 +272,7 @@ const uploadFile = async (uid, chunkIndex) => {
         chunks: chunks,
         fileId: currentFile.fileId,
         filePid: currentFile.filePid,
+        ...(currentFile.familyId ? { belongingHome: currentFile.familyId, familyId: currentFile.familyId } : {}),
       },
       showError: false,
       errorCallback: (errorMsg) => {

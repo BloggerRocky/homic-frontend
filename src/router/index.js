@@ -116,6 +116,15 @@ const router = createRouter({
           },
           component: () => import("@/views/family/CareAccount.vue")
         },
+        {
+          path: '/family/space',
+          name: '家庭空间',
+          meta: {
+            needLogin: true,
+            menuCode: "family"
+          },
+          component: () => import("@/views/family/FamilySpace.vue")
+        },
       ]
     },
     {

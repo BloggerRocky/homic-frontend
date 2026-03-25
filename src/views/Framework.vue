@@ -342,7 +342,7 @@ onUnmounted(() => {
 //添加文件
 const uploaderRef = ref();
 const addFile = (data) => {
-  const { file, filePid } = data;
+  const { file, filePid, familyId } = data;
   
   if (!showUploader.value) {
     // 获取图标位置
@@ -364,10 +364,10 @@ const addFile = (data) => {
         left: '50%',
         transform: 'translate(-50%, -50%) scale(1)',
       };
-      uploaderRef.value.addFile(file, filePid);
+      uploaderRef.value.addFile(file, filePid, familyId);
     });
   } else {
-    uploaderRef.value.addFile(file, filePid);
+    uploaderRef.value.addFile(file, filePid, familyId);
   }
 };
 
@@ -462,6 +462,10 @@ const fullMenus = [
       {
         name: "家庭管理",
         path: "/family",
+      },
+      {
+        name: "家庭空间",
+        path: "/family/space",
       },
       {
         name: "关怀账号",

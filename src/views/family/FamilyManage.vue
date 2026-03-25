@@ -425,6 +425,26 @@
         <el-button type="primary" @click="updateMemberRemark">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 关怀账号移除确认对话框 -->
+    <el-dialog v-model="showRemoveCareAccountDialog" title="⚠️ 警告：移除关怀账号" width="500px" :close-on-click-modal="false" @close="cancelRemoveCareAccount">
+      <div class="remove-care-account-content">
+        <div class="warning-icon">⚠️</div>
+        <div class="warning-text">
+          <p class="main-warning">您正在移除关怀账号 <strong>{{ selectedMember?.nickName }}</strong></p>
+          <p class="sub-warning">关怀账号移出家庭后将被<span class="highlight">永久删除</span>，所有关联数据将无法恢复！</p>
+        </div>
+        <div class="countdown-hint">
+          请仔细阅读以上警告，{{ removeCareAccountCountdown }}秒后可确认操作
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="cancelRemoveCareAccount">取消</el-button>
+        <el-button type="danger" :disabled="removeCareAccountCountdown > 0" @click="confirmRemoveCareAccount">
+          {{ removeCareAccountCountdown > 0 ? `确认移除 (${removeCareAccountCountdown}s)` : '确认移除' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -507,6 +527,11 @@ const remarkForm = reactive({
 const selectedMember = ref(null)
 const showPermissionDialog = ref(false)
 const showMemberRemarkDialog = ref(false)
+
+// 关怀账号移除确认对话框
+const showRemoveCareAccountDialog = ref(false)
+const removeCareAccountCountdown = ref(5)
+let removeCareAccountTimer = null
 
 const permissionForm = reactive({
   role: 2,
@@ -958,6 +983,27 @@ const updateMemberRemark = async () => {
 // 移出成员
 const removeMember = (member) => {
   const displayName = member.remark ? `${member.remark}(${member.nickName})` : member.nickName
+  
+  // 关怀账号需要特殊处理
+  if (member.isDummy) {
+    selectedMember.value = member
+    showRemoveCareAccountDialog.value = true
+    removeCareAccountCountdown.value = 5
+    // 启动倒计时
+    if (removeCareAccountTimer) {
+      clearInterval(removeCareAccountTimer)
+    }
+    removeCareAccountTimer = setInterval(() => {
+      removeCareAccountCountdown.value--
+      if (removeCareAccountCountdown.value <= 0) {
+        clearInterval(removeCareAccountTimer)
+        removeCareAccountTimer = null
+      }
+    }, 1000)
+    return
+  }
+  
+  // 普通成员直接移出
   proxy.Confirm(`确定要将 ${displayName} 移出家庭吗？`, async () => {
     const result = await proxy.Request({
       url: api.removeMember,
@@ -969,6 +1015,40 @@ const removeMember = (member) => {
       loadFamilyMembers()
     }
   })
+}
+
+// 确认移除关怀账号（带倒计时）
+const confirmRemoveCareAccount = async () => {
+  if (removeCareAccountCountdown.value > 0) {
+    return
+  }
+  
+  const member = selectedMember.value
+  if (!member || !member.isDummy) {
+    return
+  }
+  
+  const result = await proxy.Request({
+    url: api.removeMember,
+    params: { userId: member.userId },
+  })
+  
+  if (result) {
+    proxy.Message.success('关怀账号已移出并删除')
+    showRemoveCareAccountDialog.value = false
+    selectedMember.value = null
+    loadFamilyMembers()
+  }
+}
+
+// 取消移除关怀账号
+const cancelRemoveCareAccount = () => {
+  showRemoveCareAccountDialog.value = false
+  selectedMember.value = null
+  if (removeCareAccountTimer) {
+    clearInterval(removeCareAccountTimer)
+    removeCareAccountTimer = null
+  }
 }
 
 // 显示添加好友确认对话框
@@ -1752,6 +1832,50 @@ onMounted(() => {
       color: var(--text-secondary);
       margin-bottom: 20px;
       line-height: 1.6;
+    }
+  }
+
+  // 关怀账号移除确认对话框样式
+  .remove-care-account-content {
+    padding: 20px;
+    text-align: center;
+
+    .warning-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .warning-text {
+      margin-bottom: 20px;
+
+      .main-warning {
+        font-size: 16px;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+
+        strong {
+          color: #f56c6c;
+        }
+      }
+
+      .sub-warning {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+
+        .highlight {
+          color: #f56c6c;
+          font-weight: bold;
+        }
+      }
+    }
+
+    .countdown-hint {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      padding: 10px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
     }
   }
 }

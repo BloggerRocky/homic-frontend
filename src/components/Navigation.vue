@@ -45,6 +45,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  familyId: {
+    type: String,
+    default: null,
+  },
 });
 
 const api = {
@@ -129,6 +133,11 @@ const setPath = () => {
 
 //获取当前路径的目录
 const getNavigationFolder = async (path) => {
+  // 家庭空间模式下，不调用后端API，完全依赖本地状态管理
+  if (props.familyId) {
+    return;
+  }
+
   let url = api.getFolderInfo;
   if (props.shareId) {
     url = api.getFolderInfo4Share;
@@ -169,7 +178,8 @@ watch(
     if (
       newVal.path.indexOf("/main") === -1 &&
       newVal.path.indexOf("/settings/fileList") === -1 &&
-      newVal.path.indexOf("/share") === -1
+      newVal.path.indexOf("/share") === -1 &&
+      newVal.path.indexOf("/family") === -1
     ) {
       return;
     }
