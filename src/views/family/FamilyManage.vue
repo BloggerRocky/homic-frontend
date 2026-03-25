@@ -373,20 +373,57 @@
               </template>
             </div>
             <div class="user-id">{{ selectedMember?.userId }}</div>
+            <div class="user-role">{{ getRoleText(selectedMember?.role) }}</div>
           </div>
         </div>
-        <el-form :model="permissionForm" label-width="80px">
-          <el-form-item label="角色">
-            <el-radio-group v-model="permissionForm.role">
-              <el-radio :label="1">管理员</el-radio>
-              <el-radio :label="2">成员</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
+        
+        <!-- 创建者提示 -->
+        <div v-if="selectedMember?.role === 0" class="creator-notice">
+          <el-alert type="info" :closable="false">
+            <template #title>
+              <span>家庭创建者强制拥有所有权限</span>
+            </template>
+          </el-alert>
+        </div>
+        
+        <!-- 权限勾选 -->
+        <div v-else class="permission-checkboxes">
+          <el-form label-width="100px">
+            <el-form-item label="角色">
+              <el-radio-group v-model="permissionForm.role" :disabled="!isCreator">
+                <el-radio :label="1">管理员</el-radio>
+                <el-radio :label="2">成员</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="上传权限">
+              <el-checkbox v-model="permissionForm.upload" :disabled="!isCreator">
+                允许上传文件和创建文件夹
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item label="修改权限">
+              <el-checkbox v-model="permissionForm.modify" :disabled="!isCreator">
+                允许重命名和移动文件
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item label="删除权限">
+              <el-checkbox v-model="permissionForm.delete" :disabled="!isCreator">
+                允许删除文件
+              </el-checkbox>
+            </el-form-item>
+          </el-form>
+          
+          <div v-if="!isCreator" class="permission-hint">
+            <el-alert type="warning" :closable="false" show-icon>
+              <template #title>
+                <span>只有家庭创建者可以编辑权限</span>
+              </template>
+            </el-alert>
+          </div>
+        </div>
       </div>
       <template #footer>
         <el-button @click="showPermissionDialog = false">取消</el-button>
-        <el-button type="primary" @click="updateMemberRole">保存</el-button>
+        <el-button v-if="isCreator && selectedMember?.role !== 0" type="primary" @click="savePermissions">保存</el-button>
       </template>
     </el-dialog>
 
@@ -479,6 +516,8 @@ const api = {
   updateMemberRemark: '/family/updateMemberRemark',
   removeMember: '/family/removeMember',
   sendFriendRequest: '/friend/sendFriendRequest',
+  getUserPermissions: '/permission/getUserPermissions',
+  batchSetPermissions: '/permission/batchSetPermissions',
 }
 
 // 当前用户ID
@@ -533,9 +572,12 @@ const showRemoveCareAccountDialog = ref(false)
 const removeCareAccountCountdown = ref(5)
 let removeCareAccountTimer = null
 
-const permissionForm = reactive({
-  role: 2,
-})
+const permissionForm = ref({
+  role: 2, // 1-管理员，2-成员
+  upload: false,
+  modify: false,
+  delete: false,
+});
 
 const memberRemarkForm = reactive({
   remark: '',
@@ -933,10 +975,85 @@ const canRemoveMember = (member) => {
 }
 
 // 打开权限管理对话框
-const openPermissionDialog = (member) => {
+const openPermissionDialog = async (member) => {
   selectedMember.value = member
-  permissionForm.role = member.role
   showPermissionDialog.value = true
+  
+  // 如果是创建者，不加载权限（强制拥有所有权限）
+  if (member.role === 0) {
+    permissionForm.value = {
+      role: 0,
+      upload: true,
+      modify: true,
+      delete: true,
+    }
+    return
+  }
+  
+  // 加载用户权限
+  const result = await proxy.Request({
+    url: api.getUserPermissions,
+    params: {
+      userId: member.userId,
+      objectId: member.familyId,
+    },
+    showLoading: false,
+  })
+  
+  if (result && result.data) {
+    permissionForm.value = {
+      role: member.role, // 加载当前角色
+      upload: result.data['FAMILY-UPLOAD'] === 1,
+      modify: result.data['FAMILY-MODIFY'] === 1,
+      delete: result.data['FAMILY-DELETE'] === 1,
+    }
+  } else {
+    // 默认值
+    permissionForm.value = {
+      role: member.role,
+      upload: false,
+      modify: false,
+      delete: false,
+    }
+  }
+}
+
+// 保存权限设置
+const savePermissions = async () => {
+  if (!selectedMember.value || !familyInfo.value.familyId) return
+  
+  // 先更新角色
+  if (permissionForm.value.role !== selectedMember.value.role) {
+    const roleResult = await proxy.Request({
+      url: api.updateMemberRole,
+      params: {
+        userId: selectedMember.value.userId,
+        role: permissionForm.value.role,
+      },
+    })
+    
+    if (!roleResult) {
+      return
+    }
+  }
+  
+  // 再更新权限
+  const result = await proxy.Request({
+    url: api.batchSetPermissions,
+    params: {
+      targetUserId: selectedMember.value.userId,
+      upload: permissionForm.value.upload ? 1 : 0,
+      modify: permissionForm.value.modify ? 1 : 0,
+      delete: permissionForm.value.delete ? 1 : 0,
+      objectId: familyInfo.value.familyId,
+    },
+  })
+  
+  if (result) {
+    proxy.Message.success('权限设置成功')
+    showPermissionDialog.value = false
+    loadFamilyMembers()
+  }
 }
 
 // 打开成员备注对话框

@@ -13,7 +13,7 @@
     <div v-else>
       <div class="top">
         <div class="top-op">
-          <div class="btn" v-if="canUpload">
+          <div class="btn">
             <el-upload
               :show-file-list="false"
               :with-credentials="true"
@@ -27,7 +27,7 @@
               </el-button>
             </el-upload>
           </div>
-          <el-button type="success" @click="newFolder" v-if="canUpload">
+          <el-button type="success" @click="newFolder">
             <span class="iconfont icon-folder-add"></span>
             新建文件夹
           </el-button>
@@ -130,13 +130,13 @@
                   <el-dropdown-item command="download" v-if="row.folderType == 0 && row.status == 2">
                     <span class="iconfont icon-download"></span> 下载
                   </el-dropdown-item>
-                  <el-dropdown-item command="rename" v-if="row.fileId && row.status == 2 && canUpload">
+                  <el-dropdown-item command="rename" v-if="row.fileId && row.status == 2">
                     <span class="iconfont icon-edit"></span> 重命名
                   </el-dropdown-item>
-                  <el-dropdown-item command="move" v-if="row.fileId && row.status == 2 && canUpload">
+                  <el-dropdown-item command="move" v-if="row.fileId && row.status == 2">
                     <span class="iconfont icon-move"></span> 移动
                   </el-dropdown-item>
-                  <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2 && canUpload" divided>
+                  <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2" divided>
                     <span class="iconfont icon-del"></span> 删除
                   </el-dropdown-item>
                 </el-dropdown-menu>
@@ -186,11 +186,11 @@
       :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
       @click.stop
     >
-      <div class="context-menu-item" @click="contextMenuUpload" v-if="canUpload">
+      <div class="context-menu-item" @click="contextMenuUpload">
         <span class="iconfont icon-upload"></span>
-        <span>上传文件</span>
+        <span>上传文件至此</span>
       </div>
-      <div class="context-menu-item" @click="contextMenuNewFolder" v-if="canUpload">
+      <div class="context-menu-item" @click="contextMenuNewFolder">
         <span class="iconfont icon-folder-add"></span>
         <span>新建文件夹</span>
       </div>
@@ -204,15 +204,15 @@
       
       <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
       
-      <div class="context-menu-item" @click="contextMenuRename" v-if="shouldShowRename() && canUpload">
+      <div class="context-menu-item" @click="contextMenuRename" v-if="shouldShowRename()">
         <span class="iconfont icon-edit"></span>
         <span>重命名</span>
       </div>
-      <div class="context-menu-item" @click="contextMenuDelete" v-if="(contextMenuFile || selectFileIdList.length > 0) && canUpload">
+      <div class="context-menu-item" @click="contextMenuDelete" v-if="contextMenuFile || selectFileIdList.length > 0">
         <span class="iconfont icon-del"></span>
         <span>{{ selectFileIdList.length > 0 ? `删除 (${selectFileIdList.length}项)` : '删除' }}</span>
       </div>
-      <div class="context-menu-item" @click="contextMenuMove" v-if="(contextMenuFile || selectFileIdList.length > 0) && canUpload">
+      <div class="context-menu-item" @click="contextMenuMove" v-if="contextMenuFile || selectFileIdList.length > 0">
         <span class="iconfont icon-move"></span>
         <span>{{ selectFileIdList.length > 0 ? `移动 (${selectFileIdList.length}项)` : '移动' }}</span>
       </div>
@@ -242,7 +242,6 @@ const emit = defineEmits(["addFile"]);
 // 家庭信息
 const familyId = ref(null);
 const hasFamilyLoaded = ref(false);
-const canUpload = ref(false);
 const familySpaceInfo = ref({ useSpace: 0, totalSpace: 0 });
 
 const api = {
@@ -254,12 +253,12 @@ const api = {
   getFamilySpaceUsage: "/familySpace/getFamilySpaceUsage",
   createDownloadUrl: "/file/createDownloadUrl",
   download: "/api/file/download",
-  delFile: "/file/delFile",
-  rename: "/file/rename",
-  changeFileFolder: "/file/changeFileFolder",
+  delFile: "/familySpace/delFile",
+  rename: "/familySpace/rename",
+  changeFileFolder: "/familySpace/changeFileFolder",
 };
 
-// 检查家庭信息并确认上传权限
+// 检查家庭信息
 const checkFamily = async () => {
   const result = await proxy.Request({
     url: api.checkFamily,
@@ -267,18 +266,8 @@ const checkFamily = async () => {
   });
   if (result && result.data) {
     familyId.value = result.data.familyId || null;
-    // 判断上传权限：非关怀账号 且 role为0(创建者)或1(管理员)
-    const userInfo = proxy.VueCookies.get("userInfo");
-    if (userInfo && userInfo.isDummy) {
-      canUpload.value = false;
-    } else {
-      // role: 0-创建者, 1-管理员, 2-普通成员
-      const role = result.data.role;
-      canUpload.value = (role === 0 || role === 1);
-    }
   } else {
     familyId.value = null;
-    canUpload.value = false;
   }
   hasFamilyLoaded.value = true;
   if (familyId.value) {
@@ -515,6 +504,7 @@ const delFile = (row) => {
         url: api.delFile,
         params: {
           fileIds: row.fileId,
+          familyId: familyId.value,
         },
       });
       if (!result) {
@@ -538,6 +528,7 @@ const delFileBatch = () => {
         url: api.delFile,
         params: {
           fileIds: selectFileIdList.value.join(","),
+          familyId: familyId.value,
         },
       });
       if (!result) {
@@ -618,6 +609,7 @@ const moveFolderDone = async (folderId) => {
     params: {
       fileIds: filedIdsArray.join(","),
       filePid: folderId,
+      familyId: familyId.value,
     },
   });
   if (!result) {
