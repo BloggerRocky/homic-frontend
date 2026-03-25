@@ -44,6 +44,18 @@
             </el-input>
           </div>
           <div class="iconfont icon-refresh" @click="loadDataList"></div>
+          <!-- 空间使用情况 -->
+          <div class="space-info" v-if="familySpaceInfo.totalSpace > 0">
+            <span class="space-text">
+              {{ proxy.Utils.size2Str(familySpaceInfo.useSpace) }} / {{ proxy.Utils.size2Str(familySpaceInfo.totalSpace) }}
+            </span>
+            <el-progress
+              :percentage="Math.round((familySpaceInfo.useSpace / familySpaceInfo.totalSpace) * 100)"
+              :stroke-width="8"
+              :show-text="false"
+              class="space-progress"
+            />
+          </div>
         </div>
         <!--导航-->
         <Navigation ref="navigationRef" :familyId="familyId" @navChange="navChange"></Navigation>
@@ -171,6 +183,7 @@ const emit = defineEmits(["addFile"]);
 const familyId = ref(null);
 const hasFamilyLoaded = ref(false);
 const canUpload = ref(false);
+const familySpaceInfo = ref({ useSpace: 0, totalSpace: 0 });
 
 const api = {
   checkFamily: "/family/checkFamily",
@@ -178,6 +191,7 @@ const api = {
   loadDataList: "/familySpace/loadDataList",
   uploadFile: "/familySpace/uploadFile",
   newFolder: "/familySpace/newFolder",
+  getFamilySpaceUsage: "/familySpace/getFamilySpaceUsage",
   createDownloadUrl: "/file/createDownloadUrl",
   download: "/api/file/download",
   delFile: "/file/delFile",
@@ -207,6 +221,7 @@ const checkFamily = async () => {
   hasFamilyLoaded.value = true;
   if (familyId.value) {
     loadDataList();
+    getFamilySpaceUsage();
   }
 };
 
@@ -291,6 +306,7 @@ const addFile = async (fileData) => {
 const reload = () => {
   showLoading.value = false;
   loadDataList();
+  getFamilySpaceUsage();
 };
 defineExpose({ reload });
 
@@ -376,7 +392,7 @@ const rowSelected = (rows) => {
   });
 };
 
-// 删除
+// 删除后刷新空间使用情况
 const delFile = (row) => {
   proxy.Confirm(
     `你确定要删除【${row.fileName}】吗？删除的文件可在10天内通过回收站还原`,
@@ -391,6 +407,7 @@ const delFile = (row) => {
         return;
       }
       loadDataList();
+      getFamilySpaceUsage();
     }
   );
 };
@@ -429,12 +446,26 @@ const preview = (data) => {
   previewRef.value.showPreview(data, 0);
 };
 
-// 导航
 const navChange = (data) => {
   const { curFolder } = data;
   currentFolder.value = curFolder;
   showLoading.value = true;
   loadDataList();
+};
+
+// 获取家庭空间使用情况
+const getFamilySpaceUsage = async () => {
+  if (!familyId.value) return;
+  let result = await proxy.Request({
+    url: api.getFamilySpaceUsage,
+    params: {
+      familyId: familyId.value,
+    },
+    showLoading: false,
+  });
+  if (result && result.data) {
+    familySpaceInfo.value = result.data;
+  }
 };
 
 onMounted(() => {
@@ -462,6 +493,30 @@ onMounted(() => {
     .loading-text {
       font-size: 16px;
       color: var(--text-secondary);
+    }
+  }
+
+  .top-op {
+    .space-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      padding: 0 10px;
+      
+      .space-text {
+        font-size: 12px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      
+      .space-progress {
+        width: 100px;
+        
+        :deep(.el-progress-bar__outer) {
+          background-color: var(--border-light);
+        }
+      }
     }
   }
 }
