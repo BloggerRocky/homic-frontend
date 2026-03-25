@@ -41,7 +41,15 @@ const route = useRoute();
 
 const api = {
   loadAllFolder: "/file/loadAllFolder",
+  loadFamilyFolder: "/familySpace/loadAllFolder",
 };
+
+const props = defineProps({
+  familyId: {
+    type: String,
+    default: null,
+  },
+});
 
 const dialogConfig = ref({
   show: false,
@@ -64,12 +72,13 @@ const folderList = ref([]);
 const currentFolder = ref({});
 
 const loadAllFolder = async () => {
+  const url = props.familyId ? api.loadFamilyFolder : api.loadAllFolder;
+  const params = props.familyId
+    ? { filePid: filePid.value, currentFileIds: currentFileIds.value, familyId: props.familyId }
+    : { filePid: filePid.value, currentFileIds: currentFileIds.value };
   let result = await proxy.Request({
-    url: api.loadAllFolder,
-    params: {
-      filePid: filePid.value,
-      currentFileIds: currentFileIds.value,
-    },
+    url: url,
+    params: params,
   });
   if (!result) {
     return;
@@ -88,6 +97,7 @@ const showFolderDialog = (currentFolder) => {
   filePid.value = "0";
   nextTick(() => {
     navigationRef.value.init();
+    loadAllFolder();
   });
 };
 

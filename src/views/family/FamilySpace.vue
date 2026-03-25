@@ -60,7 +60,7 @@
         <!--导航-->
         <Navigation ref="navigationRef" :familyId="familyId" @navChange="navChange"></Navigation>
       </div>
-      <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
+      <div class="file-list" v-if="tableData.list && tableData.list.length > 0" @contextmenu="handleContextMenu">
         <Table
           ref="dataTableRef"
           :columns="columns"
@@ -130,7 +130,13 @@
                   <el-dropdown-item command="download" v-if="row.folderType == 0 && row.status == 2">
                     <span class="iconfont icon-download"></span> 下载
                   </el-dropdown-item>
-                  <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2 && canUpload">
+                  <el-dropdown-item command="rename" v-if="row.fileId && row.status == 2 && canUpload">
+                    <span class="iconfont icon-edit"></span> 重命名
+                  </el-dropdown-item>
+                  <el-dropdown-item command="move" v-if="row.fileId && row.status == 2 && canUpload">
+                    <span class="iconfont icon-move"></span> 移动
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2 && canUpload" divided>
                     <span class="iconfont icon-del"></span> 删除
                   </el-dropdown-item>
                 </el-dropdown-menu>
@@ -166,7 +172,61 @@
       </div>
       <!--预览-->
       <Preview ref="previewRef"> </Preview>
+      <!--移动-->
+      <FolderSelect
+        ref="folderSelectRef"
+        :familyId="familyId"
+        @folderSelect="moveFolderDone"
+      ></FolderSelect>
     </div>
+    <!--自定义右键菜单-->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu"
+      :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="contextMenuUpload" v-if="canUpload">
+        <span class="iconfont icon-upload"></span>
+        <span>上传文件</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuNewFolder" v-if="canUpload">
+        <span class="iconfont icon-folder-add"></span>
+        <span>新建文件夹</span>
+      </div>
+      <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
+      
+      <!-- 下载 - 文件或多个文件 -->
+      <div class="context-menu-item" @click="contextMenuDownload" v-if="shouldShowDownload()">
+        <span class="iconfont icon-download"></span>
+        <span>{{ getDownloadText() }}</span>
+      </div>
+      
+      <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
+      
+      <div class="context-menu-item" @click="contextMenuRename" v-if="shouldShowRename() && canUpload">
+        <span class="iconfont icon-edit"></span>
+        <span>重命名</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuDelete" v-if="(contextMenuFile || selectFileIdList.length > 0) && canUpload">
+        <span class="iconfont icon-del"></span>
+        <span>{{ selectFileIdList.length > 0 ? `删除 (${selectFileIdList.length}项)` : '删除' }}</span>
+      </div>
+      <div class="context-menu-item" @click="contextMenuMove" v-if="(contextMenuFile || selectFileIdList.length > 0) && canUpload">
+        <span class="iconfont icon-move"></span>
+        <span>{{ selectFileIdList.length > 0 ? `移动 (${selectFileIdList.length}项)` : '移动' }}</span>
+      </div>
+    </div>
+    
+    <!--隐藏的上传input用于右键菜单上传-->
+    <input 
+      ref="contextUploadInput" 
+      type="file" 
+      multiple 
+      accept="*"
+      style="display: none"
+      @change="handleContextUpload"
+    />
   </div>
 </template>
 
@@ -195,6 +255,8 @@ const api = {
   createDownloadUrl: "/file/createDownloadUrl",
   download: "/api/file/download",
   delFile: "/file/delFile",
+  rename: "/file/rename",
+  changeFileFolder: "/file/changeFileFolder",
 };
 
 // 检查家庭信息并确认上传权限
@@ -345,6 +407,37 @@ const cancelNameEdit = (index) => {
   editing.value = false;
 };
 
+// 编辑文件名
+const editFileName = (index) => {
+  if (tableData.value.list[0].fileId == "") {
+    tableData.value.list.splice(0, 1);
+    index = index - 1;
+  }
+  tableData.value.list.forEach((element) => {
+    element.showEdit = false;
+  });
+  let cureentData = tableData.value.list[index];
+  cureentData.showEdit = true;
+
+  //编辑文件
+  if (cureentData.folderType == 0) {
+    cureentData.fileNameReal = cureentData.fileName.substring(
+      0,
+      cureentData.fileName.indexOf(".")
+    );
+    cureentData.fileSuffix = cureentData.fileName.substring(
+      cureentData.fileName.indexOf(".")
+    );
+  } else {
+    cureentData.fileNameReal = cureentData.fileName;
+    cureentData.fileSuffix = "";
+  }
+  editing.value = true;
+  nextTick(() => {
+    editNameRef.value.focus();
+  });
+};
+
 const saveNameEdit = async (index) => {
   const { fileId, filePid, fileNameReal } = tableData.value.list[index];
   if (fileNameReal == "" || fileNameReal.indexOf("/") != -1) {
@@ -366,6 +459,21 @@ const saveNameEdit = async (index) => {
     }
     tableData.value.list[index] = result.data;
     editing.value = false;
+  } else {
+    // 重命名
+    let result = await proxy.Request({
+      url: api.rename,
+      params: {
+        fileId: fileId,
+        fileName: fileNameReal,
+      },
+    });
+    if (!result) {
+      return;
+    }
+    tableData.value.list[index].fileName = result.data.fileName;
+    tableData.value.list[index].showEdit = false;
+    editing.value = false;
   }
 };
 
@@ -374,6 +482,12 @@ const handleOperation = (command, row, index) => {
   switch (command) {
     case 'download':
       download(row);
+      break;
+    case 'rename':
+      editFileName(index);
+      break;
+    case 'move':
+      moveFolder(row);
       break;
     case 'delete':
       delFile(row);
@@ -412,6 +526,29 @@ const delFile = (row) => {
   );
 };
 
+// 批量删除
+const delFileBatch = () => {
+  if (selectFileIdList.value.length == 0) {
+    return;
+  }
+  proxy.Confirm(
+    `你确定要删除这些文件吗？删除的文件可在10天内通过回收站还原`,
+    async () => {
+      let result = await proxy.Request({
+        url: api.delFile,
+        params: {
+          fileIds: selectFileIdList.value.join(","),
+        },
+      });
+      if (!result) {
+        return;
+      }
+      loadDataList();
+      getFamilySpaceUsage();
+    }
+  );
+};
+
 // 下载
 const download = async (row) => {
   let result = await proxy.Request({
@@ -429,6 +566,65 @@ const download = async (row) => {
   setTimeout(() => {
     document.body.removeChild(link);
   }, 100);
+};
+
+// 带延迟的下载函数
+const downloadWithDelay = (file, delay) => {
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      await download(file);
+      resolve();
+    }, delay);
+  });
+};
+
+// 移动目录
+const folderSelectRef = ref();
+const currentMoveFile = ref({});
+const moveFolder = (data) => {
+  currentMoveFile.value = data;
+  folderSelectRef.value.showFolderDialog(data.fileId);
+};
+
+// 批量移动
+const moveFolderBatch = () => {
+  currentMoveFile.value = {};
+  // 批量移动如果选择的是文件夹，那么要将文件夹也过滤
+  const excludeFileIdList = [currentFolder.value.fileId];
+  selectFileList.value.forEach((item) => {
+    if (item.folderType == 1) {
+      excludeFileIdList.push(item.fileId);
+    }
+  });
+  folderSelectRef.value.showFolderDialog(excludeFileIdList.join(","));
+};
+
+const moveFolderDone = async (folderId) => {
+  if (
+    currentMoveFile.value.filePid === folderId ||
+    currentFolder.value.fileId == folderId
+  ) {
+    proxy.Message.warning("文件正在当前目录，无需移动");
+    return;
+  }
+  let filedIdsArray = [];
+  if (currentMoveFile.value.fileId) {
+    filedIdsArray.push(currentMoveFile.value.fileId);
+  } else {
+    filedIdsArray = filedIdsArray.concat(selectFileIdList.value);
+  }
+  let result = await proxy.Request({
+    url: api.changeFileFolder,
+    params: {
+      fileIds: filedIdsArray.join(","),
+      filePid: folderId,
+    },
+  });
+  if (!result) {
+    return;
+  }
+  folderSelectRef.value.close();
+  loadDataList();
 };
 
 // 预览
@@ -465,6 +661,174 @@ const getFamilySpaceUsage = async () => {
   });
   if (result && result.data) {
     familySpaceInfo.value = result.data;
+  }
+};
+
+// 右键菜单相关
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuFile = ref(null);
+const contextUploadInput = ref(null);
+
+// 处理右键菜单
+const handleContextMenu = (event) => {
+  event.preventDefault();
+  
+  // 检查是否点击在文件行上
+  let target = event.target;
+  let fileRow = null;
+  
+  // 向上查找是否在文件行内
+  while (target && target !== event.currentTarget) {
+    if (target.classList && target.classList.contains('file-item')) {
+      // 找到对应的文件数据
+      const fileName = target.querySelector('.file-name span');
+      if (fileName) {
+        const fileNameText = fileName.textContent.trim();
+        fileRow = tableData.value.list.find(item => item.fileName === fileNameText);
+      }
+      break;
+    }
+    target = target.parentElement;
+  }
+  
+  contextMenuFile.value = fileRow;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+  
+  // 点击其他地方关闭菜单
+  const closeMenu = () => {
+    contextMenuVisible.value = false;
+    document.removeEventListener('click', closeMenu);
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+};
+
+// 右键菜单 - 上传文件
+const contextMenuUpload = () => {
+  contextMenuVisible.value = false;
+  contextUploadInput.value.click();
+};
+
+// 处理右键菜单上传
+const handleContextUpload = (event) => {
+  const files = event.target.files;
+  if (files && files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      addFile({ file: files[i] });
+    }
+  }
+  // 清空input以便下次可以选择相同文件
+  event.target.value = '';
+};
+
+// 右键菜单 - 新建文件夹
+const contextMenuNewFolder = () => {
+  contextMenuVisible.value = false;
+  newFolder();
+};
+
+// 右键菜单 - 删除
+const contextMenuDelete = () => {
+  contextMenuVisible.value = false;
+  // 优先处理多选对象
+  if (selectFileIdList.value.length > 0) {
+    delFileBatch();
+  } else if (contextMenuFile.value) {
+    delFile(contextMenuFile.value);
+  }
+};
+
+// 右键菜单 - 重命名
+const contextMenuRename = () => {
+  contextMenuVisible.value = false;
+  
+  if (contextMenuFile.value) {
+    // 找到文件在列表中的索引
+    const index = tableData.value.list.findIndex(
+      item => item.fileId === contextMenuFile.value.fileId
+    );
+    if (index !== -1) {
+      editFileName(index);
+    }
+  } else if (selectFileIdList.value.length === 1) {
+    // 如果只选中了一个文件
+    const index = tableData.value.list.findIndex(
+      item => item.fileId === selectFileIdList.value[0]
+    );
+    if (index !== -1) {
+      editFileName(index);
+    }
+  }
+};
+
+// 判断是否显示重命名选项（只在右键单个文件或选中单个文件时显示）
+const shouldShowRename = () => {
+  if (contextMenuFile.value && selectFileIdList.value.length === 0) {
+    return true;
+  }
+  if (selectFileIdList.value.length === 1) {
+    return true;
+  }
+  return false;
+};
+
+// 右键菜单 - 移动
+const contextMenuMove = () => {
+  contextMenuVisible.value = false;
+  // 优先处理多选对象
+  if (selectFileIdList.value.length > 0) {
+    moveFolderBatch();
+  } else if (contextMenuFile.value) {
+    moveFolder(contextMenuFile.value);
+  }
+};
+
+// 判断是否应该显示文件操作菜单
+const shouldShowFileOperations = () => {
+  return contextMenuFile.value || selectFileIdList.value.length > 0;
+};
+
+// 判断是否显示"下载"
+const shouldShowDownload = () => {
+  // 有多选时
+  if (selectFileIdList.value.length > 0) {
+    // 检查是否所有选中的都是文件（不包含文件夹）
+    return selectFileList.value.every(file => file.folderType === 0);
+  }
+  // 右键单个文件时
+  if (contextMenuFile.value) {
+    return contextMenuFile.value.folderType === 0;
+  }
+  return false;
+};
+
+// 获取下载按钮文本
+const getDownloadText = () => {
+  const count = selectFileIdList.value.length;
+  if (count > 1) {
+    return `下载 (${count}项)`;
+  }
+  return '下载';
+};
+
+// 右键菜单 - 下载
+const contextMenuDownload = async () => {
+  contextMenuVisible.value = false;
+  
+  if (selectFileIdList.value.length > 0) {
+    // 批量下载 - 使用延迟避免浏览器阻止
+    for (let i = 0; i < selectFileList.value.length; i++) {
+      const file = selectFileList.value[i];
+      if (file.folderType === 0) {
+        await downloadWithDelay(file, i * 300); // 每个下载间隔300ms
+      }
+    }
+  } else if (contextMenuFile.value && contextMenuFile.value.folderType === 0) {
+    download(contextMenuFile.value);
   }
 };
 
@@ -518,6 +882,48 @@ onMounted(() => {
         }
       }
     }
+  }
+}
+
+.context-menu {
+  position: fixed;
+  background: var(--component-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  min-width: 160px;
+  padding: 5px 0;
+  
+  .context-menu-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition: all 0.3s;
+    
+    .iconfont {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+    
+    &:hover {
+      background-color: var(--component-hover-bg);
+      color: #409eff;
+      
+      .iconfont {
+        color: #409eff;
+      }
+    }
+  }
+  
+  .context-menu-divider {
+    height: 1px;
+    background-color: var(--border-light);
+    margin: 5px 0;
   }
 }
 </style>
