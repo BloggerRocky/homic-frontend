@@ -117,8 +117,24 @@
               {{ proxy.Utils.size2Str(row.fileSize) }}</span
             >
           </template>
+          <template #visibleToCare="{ index, row }">
+            <el-switch
+              v-if="canManageCareVisibility && row.fileId"
+              :model-value="row.visibleToCare"
+              :active-value="1"
+              :inactive-value="0"
+              @change="(value) => handleVisibleToCareChange(row.fileId, value)"
+            />
+            <span v-else>{{ row.visibleToCare === 1 ? '可见' : '不可见' }}</span>
+          </template>
           <template #nickName="{ index, row }">
-            <span>{{ row.nickName || '未知' }}</span>
+            <div class="user-info-cell">
+              <Avatar
+                :userId="row.userId"
+                :width="32"
+              ></Avatar>
+              <span class="user-name">{{ row.nickName || '未知' }}</span>
+            </div>
           </template>
           <template #operation="{ index, row }">
             <el-dropdown trigger="click" @command="(command) => handleOperation(command, row, index)">
@@ -234,6 +250,7 @@
 import { ref, getCurrentInstance, nextTick, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { MoreFilled } from '@element-plus/icons-vue';
+import Avatar from "../../components/Avatar.vue";
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
@@ -243,10 +260,12 @@ const emit = defineEmits(["addFile"]);
 const familyId = ref(null);
 const hasFamilyLoaded = ref(false);
 const familySpaceInfo = ref({ useSpace: 0, totalSpace: 0 });
+const canManageCareVisibility = ref(false); // 是否可以管理关怀用户可见性
 
 const api = {
   checkFamily: "/family/checkFamily",
   getFamilyInfo: "/family/getFamilyInfo",
+  getUserPermissions: "/family/getUserPermissions",
   loadDataList: "/familySpace/loadDataList",
   uploadFile: "/familySpace/uploadFile",
   newFolder: "/familySpace/newFolder",
@@ -256,6 +275,7 @@ const api = {
   delFile: "/familySpace/delFile",
   rename: "/familySpace/rename",
   changeFileFolder: "/familySpace/changeFileFolder",
+  updateFileVisibleToCare: "/familySpace/updateFileVisibleToCare",
 };
 
 // 检查家庭信息
@@ -266,13 +286,33 @@ const checkFamily = async () => {
   });
   if (result && result.data) {
     familyId.value = result.data.familyId || null;
-  } else {
-    familyId.value = null;
+    if (familyId.value) {
+      await getUserPermissions();
+      await getFamilySpaceUsage();
+    }
   }
   hasFamilyLoaded.value = true;
   if (familyId.value) {
     loadDataList();
-    getFamilySpaceUsage();
+  }
+};
+
+// 获取用户权限
+const getUserPermissions = async () => {
+  if (!familyId.value) return;
+  
+  const result = await proxy.Request({
+    url: api.getUserPermissions,
+    params: {
+      familyId: familyId.value,
+    },
+    showLoading: false,
+  });
+  
+  if (result && result.data) {
+    const permissions = result.data;
+    // 检查是否有关怀用户可见性管理权限
+    canManageCareVisibility.value = permissions.CARE_VISIBILITY_MANAGE === 1;
   }
 };
 
@@ -299,6 +339,12 @@ const columns = ref([
     prop: "fileSize",
     scopedSlots: "fileSize",
     width: 200,
+  },
+  {
+    label: "关怀用户可见",
+    prop: "visibleToCare",
+    scopedSlots: "visibleToCare",
+    width: 120,
   },
   {
     label: "操作",
@@ -351,6 +397,44 @@ const addFile = async (fileData) => {
     filePid: currentFolder.value.fileId,
     familyId: familyId.value,
   });
+};
+
+// 更新文件对关怀用户的可见性
+const handleVisibleToCareChange = async (fileId, visibleToCare) => {
+  if (!familyId.value || !fileId) return;
+  
+  // 防抖：如果值没有实际变化，则不发送请求
+  const row = tableData.value.list?.find(item => item.fileId === fileId);
+  if (row && row.visibleToCare === visibleToCare) {
+    return;
+  }
+  
+  try {
+    const result = await proxy.Request({
+      url: api.updateFileVisibleToCare,
+      params: {
+        fileId: fileId,
+        visibleToCare: visibleToCare,
+        familyId: familyId.value,
+      },
+    });
+    
+    if (result) {
+      proxy.Message.success('更新成功');
+      // 更新本地数据
+      if (row) {
+        row.visibleToCare = visibleToCare;
+      }
+    } else {
+      // 如果更新失败，刷新列表以恢复正确状态
+      loadDataList();
+    }
+  } catch (error) {
+    console.error('更新可见性失败:', error);
+    proxy.Message.error('更新失败');
+    // 刷新列表以恢复正确状态
+    loadDataList();
+  }
 };
 
 // 上传回调 - 刷新列表
@@ -916,6 +1000,19 @@ onMounted(() => {
     height: 1px;
     background-color: var(--border-light);
     margin: 5px 0;
+  }
+}
+
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .user-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>
