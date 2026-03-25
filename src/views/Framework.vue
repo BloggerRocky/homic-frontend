@@ -3,7 +3,7 @@
     <div class="header">
       <div class="logo">
         <img src="/icon.png" alt="Homic" class="logo-icon" />
-        <span class="name">Homic 家庭云存储服务 v1.0.1</span>
+        <span class="name">Homic 家庭云存储服务 v1.0.2</span>
       </div>
       <div class="right-panel">
         <div class="upload-section">
