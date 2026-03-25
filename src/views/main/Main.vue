@@ -137,6 +137,9 @@
                 <el-dropdown-item command="move" v-if="row.fileId && row.status == 2">
                   <span class="iconfont icon-move"></span> 移动
                 </el-dropdown-item>
+                <el-dropdown-item command="syncToFamily" v-if="row.folderType == 0 && row.status == 2 && !row.belongingHome">
+                  <span class="iconfont icon-refresh"></span> 同步至家庭空间
+                </el-dropdown-item>
                 <el-dropdown-item command="delete" v-if="row.fileId && row.status == 2" divided>
                   <span class="iconfont icon-del"></span> 删除
                 </el-dropdown-item>
@@ -216,6 +219,14 @@
       </div>
       
       <div class="context-menu-divider" v-if="shouldShowFileOperations()"></div>
+      
+      <!-- 同步至家庭空间 - 只对单个文件显示 -->
+      <div class="context-menu-item" @click="contextMenuSyncToFamily" v-if="shouldShowSyncToFamily()">
+        <span class="iconfont icon-refresh"></span>
+        <span>同步至家庭空间</span>
+      </div>
+      
+      <div class="context-menu-divider" v-if="shouldShowFileOperations() && shouldShowSyncToFamily()"></div>
       
       <div class="context-menu-item" @click="contextMenuRename" v-if="shouldShowRename()">
         <span class="iconfont icon-edit"></span>
@@ -562,13 +573,16 @@ const handleOperation = (command, row, index) => {
     case 'move':
       moveFolder(row);
       break;
+    case 'syncToFamily':
+      syncToFamily(row);
+      break;
     case 'delete':
       delFile(row);
       break;
   }
 };
 
-//多选 批量选择
+// 多选 批量选择
 const selectFileIdList = ref([]);
 const selectFileList = ref([]);
 const rowSelected = (rows) => {
@@ -984,6 +998,79 @@ const downloadWithDelay = (file, delay) => {
       resolve();
     }, delay);
   });
+};
+
+// 同步至家庭空间
+const syncToFamily = async (file) => {
+  if (!file || file.folderType !== 0) {
+    proxy.Message.warning('只能同步文件');
+    return;
+  }
+
+  try {
+    // 先检查用户是否有家庭
+    const familyResult = await proxy.Request({
+      url: '/family/checkFamily',
+      showLoading: false,
+    });
+
+    if (!familyResult || !familyResult.data || !familyResult.data.familyId) {
+      proxy.Message.warning('您还没有加入家庭');
+      return;
+    }
+
+    // 调用同步接口
+    let result = await proxy.Request({
+      url: '/file/syncToFamily',
+      params: {
+        fileIds: file.fileId,
+        familyId: familyResult.data.familyId
+      }
+    });
+
+    if (result) {
+      proxy.Message.success('文件同步成功');
+      loadDataList(); // 刷新列表
+    }
+  } catch (error) {
+    console.error('同步失败:', error);
+  }
+};
+
+// 右键菜单 - 同步至家庭空间
+const contextMenuSyncToFamily = () => {
+  contextMenuVisible.value = false;
+  
+  let fileToSync = null;
+  
+  if (contextMenuFile.value && selectFileIdList.value.length === 0) {
+    fileToSync = contextMenuFile.value;
+  } else if (selectFileIdList.value.length === 1) {
+    fileToSync = selectFileList.value[0];
+  }
+  
+  if (fileToSync) {
+    syncToFamily(fileToSync);
+  }
+};
+
+// 判断是否显示"同步至家庭空间"选项
+const shouldShowSyncToFamily = () => {
+  // 只对单个文件显示，不在家庭空间中显示
+  if (contextMenuFile.value && selectFileIdList.value.length === 0) {
+    return contextMenuFile.value.folderType === 0 && 
+           contextMenuFile.value.status === 2 && 
+           !contextMenuFile.value.belongingHome;
+  }
+  
+  if (selectFileIdList.value.length === 1) {
+    const file = selectFileList.value[0];
+    return file.folderType === 0 && 
+           file.status === 2 && 
+           !file.belongingHome;
+  }
+  
+  return false;
 };
 </script>
 
